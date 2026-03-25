@@ -15,7 +15,19 @@ A skill is a markdown file with `name` and `description` YAML frontmatter that d
 
 | Skill Name | Description |
 |------------|-------------|
-| [career-profile-optimizer](./skills/career-profile-optimizer/SKILL.md) | Guides the user in iteratively rewriting their work experiences, resume, and LinkedIn profile targeting specific roles and seniority metrics. |
+| [career-profile-optimizer](./skills/career-profile-optimizer/SKILL.md) | Iteratively rewrites work experiences for LinkedIn and ATS/PDF, then generates optimized LinkedIn headline and about section for a target role/seniority. |
+
+## Per-Skill Details
+
+To keep this repository scalable as more skills are added, the root README stays concise.
+
+For each skill, use the skill folder as the source of truth:
+- `SKILL.md`: trigger conditions, flow, and boundaries
+- Supporting docs (for example `output-contract.md`): detailed templates, modes, and validation rules
+
+For `career-profile-optimizer`, see:
+- [skills/career-profile-optimizer/SKILL.md](./skills/career-profile-optimizer/SKILL.md)
+- [skills/career-profile-optimizer/output-contract.md](./skills/career-profile-optimizer/output-contract.md)
 
 ## Installation
 
@@ -52,6 +64,8 @@ description: Use when the user asks for [trigger condition].
 ```
 
 4. Test the skill by invoking it with an AI agent.
+
+For this repository quality baseline, follow the guide in [docs/skill-authoring-standard.md](./docs/skill-authoring-standard.md).
 
 ## Contributing
 
