@@ -1,6 +1,6 @@
 ---
 name: career-profile-optimizer
-description: Use when a professional profile needs role-targeted rewriting with stronger impact evidence, clearer ATS keyword alignment, and consistent LinkedIn positioning.
+description: Use when the user requests help rewriting a resume (CV) or LinkedIn profile, generating an ATS-friendly HTML/DOCX resume, targeting professional experience to a specific role, or when career history needs stronger metrics, impact evidence, and precise keyword alignment.
 ---
 
 # Career Profile Optimizer
