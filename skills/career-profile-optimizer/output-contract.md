@@ -7,6 +7,7 @@ This file defines required generation and validation behavior for `career-profil
 - `optimization priority`: `balanced` (unless user chooses LinkedIn-first or ATS-first)
 - `language-mode`: `monolingual` (unless user enables bilingual)
 - `audit-mode`: `off` (unless user enables on)
+- `resume-export`: `off` (unless user enables on)
 
 ## Per-Experience Outputs (Phase 2)
 
@@ -47,9 +48,9 @@ Always generate:
 Recommend exactly 5 skills for each experience.
 
 ### Required Template (for each skill)
-- `Skill: <name>`
-- `Evidence: <responsibility/tool/result explicitly mentioned by user>`
-- `Why it improves discoverability: <short role-aligned rationale>`
+- `Skill: <name>` (Translate "Skill" to the user's language)
+- `Evidence: <responsibility/tool/result explicitly mentioned by user>` (Translate "Evidence" to the user's language)
+- `Why it improves discoverability: <short role-aligned rationale>` (Translate "Why it improves discoverability" to the user's language)
 
 ### Low-Detail Micro-Template
 Use when user context remains weak after clarification:
@@ -141,3 +142,20 @@ Before presenting final output:
 6. `Corrective Actions`
 - Replacements, follow-up questions, or estimate labeling used
 - If none: `No corrective actions required`
+
+## Resume Export Contract
+
+### resume-export off
+- End interaction after Phase 3. No final document compilation required.
+
+### resume-export on
+- Execute **Phase 4: Full Resume Assembly** after Phase 3.
+- Generate a pure, semantic HTML code block representing the complete ATS-friendly resume.
+- **Template Requirement**: You MUST use the exact HTML structure provided in `skills/career-profile-optimizer/resume-template.html`. Do NOT invent new structure, `<style>` tags, inline CSS, or wrapping `<div>` elements. Keep it purely structural (`<h1>`, `<h2>`, `<h3>`, `<ul>`, `<p>`).
+- **Format Requirements**: Fill out the bracketed information from the specific template based on the data inferred or collected. You MUST translate the section headers ("Professional Summary", "Experience", "Education", "Skills") strictly to the actual language being used for the content of the resume, preserving cohesion.
+- **Bilingual Mode**: If `language-mode` is `bilingual`, you MUST generate **two distinct independent HTML blocks** (one block for the primary language and another block for the secondary language) applying the template twice. Translate headers appropriately for each block.
+- **Instructions**: You MUST output clear instructions for the user telling them to:
+  1. Copy the generated HTML block.
+  2. Save it locally as an `.html` file (e.g., `resume.html`) and open it in a web browser, OR alternatively, paste the code into an online HTML viewer like the W3Schools Tryit Editor (https://www.w3schools.com/html/tryit.asp?filename=tryhtml_intro).
+  3. Press "Ctrl+A" and "Ctrl+C" to select and copy the rendered content from the browser page or viewer.
+  4. Paste the content into a blank Word document or Google Docs to retain perfect heading/list hierarchy for ATS parsing.

@@ -37,7 +37,7 @@ You MUST follow this step-by-step process. Check off each step as you go.
 
 ### Phase 1: Setup & Alignment
 1. Capture target role, industry, and seniority.
-2. Capture mode choices (priority, language-mode, audit-mode) using defaults from `output-contract.md` if omitted.
+2. Capture mode choices (priority, language-mode, audit-mode, resume-export) using defaults from `output-contract.md` if omitted.
 3. Ask for the first raw experience.
 
 ### Phase 2: The Interview Loop (Experience by Experience)
@@ -61,12 +61,20 @@ After the user finishes all experiences:
 3. Run final validation pass from `output-contract.md`.
 4. If audit-mode is on, append the required audit checklist format.
 
+### Phase 4: Full Resume Assembly (resume-export only)
+If `resume-export` mode is ON:
+1. Data Collection: Infer required additional sections from previous interactions (Contact Info, Education, Key Skills list). If any are missing, ask the user iteratively to provide them before generation.
+2. Structure Merging: Merge the generated "ATS-first" content from Phase 2 into a cohesive final layout.
+3. HTML Generation: Output the complete, semantic HTML code block(s) strictly following the limitations and directives of `output-contract.md` (no complex CSS, purely structure tags like `<h1>`, `<h2>`, `<ul>`).
+4. Output specific browser and copy-paste instructions for Word/Google Docs transition as defined in `output-contract.md`.
+
 ## Quick Reference
 - One experience per iteration.
 - Clarify before generating.
 - Never invent facts.
 - Use output templates + rubric + gates from `output-contract.md`.
 - Validate before presenting.
+- **Phase 4** triggers at the end if `resume-export: on`.
 
 ## Output Formatting Best Practices
 1. Start bullets with action verbs.
