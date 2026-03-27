@@ -63,7 +63,7 @@ After the user finishes all experiences:
 
 ### Phase 4: Full Resume Assembly (resume-export only)
 If `resume-export` mode is ON:
-1. Data Collection: Infer required additional sections from previous interactions (Contact Info, Education, Key Skills list). If any are missing, ask the user iteratively to provide them before generation.
+1. Data Collection: Infer required additional sections from previous interactions (Contact Info, Education, Key Skills list). Additionally, ask the user if they want to include optional fields: Target Roles/Headline, external Links (LinkedIn, GitHub, Portfolio, etc.), and Languages (with proficiency). If any required are missing, ask the user iteratively to provide them before generation.
 2. Structure Merging: Merge the generated "ATS-first" content from Phase 2 into a cohesive final layout.
 3. HTML Generation: Output the complete, semantic HTML code block(s) strictly following the limitations and directives of `output-contract.md` (no complex CSS, purely structure tags like `<h1>`, `<h2>`, `<ul>`).
 4. Output specific browser and copy-paste instructions for Word/Google Docs transition as defined in `output-contract.md`.

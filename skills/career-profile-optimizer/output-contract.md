@@ -152,7 +152,7 @@ Before presenting final output:
 - Execute **Phase 4: Full Resume Assembly** after Phase 3.
 - Generate a pure, semantic HTML code block representing the complete ATS-friendly resume.
 - **Template Requirement**: You MUST use the exact HTML structure provided in `skills/career-profile-optimizer/resume-template.html`. Do NOT invent new structure, `<style>` tags, inline CSS, or wrapping `<div>` elements. Keep it purely structural (`<h1>`, `<h2>`, `<h3>`, `<ul>`, `<p>`).
-- **Format Requirements**: Fill out the bracketed information from the specific template based on the data inferred or collected. You MUST translate the section headers ("Professional Summary", "Experience", "Education", "Skills") strictly to the actual language being used for the content of the resume, preserving cohesion.
+- **Format Requirements**: Fill out the bracketed information from the specific template based on the data inferred or collected. You MUST translate the section headers ("Professional Summary", "Experience", "Education", "Skills", "Languages") strictly to the actual language being used for the content of the resume, preserving cohesion. If optional fields (Target Roles/Headline, external Links, Languages) are not provided by the user, omit their corresponding `<p>` or `<h2>`/`<ul>` tags entirely. Ensure external Links are grouped with a maximum of 2 links per `<p>` tag.
 - **Bilingual Mode**: If `language-mode` is `bilingual`, you MUST generate **two distinct independent HTML blocks** (one block for the primary language and another block for the secondary language) applying the template twice. Translate headers appropriately for each block.
 - **Instructions**: You MUST output clear instructions for the user telling them to:
   1. Copy the generated HTML block.
