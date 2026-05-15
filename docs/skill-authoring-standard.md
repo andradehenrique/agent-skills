@@ -15,7 +15,7 @@ Create skills that are:
 Each skill should include:
 1. YAML frontmatter with `name` and `description`
 2. Clear overview and scope
-3. Hard gates for non-negotiable constraints
+3. Core Rules (using `<HARD-GATE>` boundaries)
 4. Step-by-step execution flow
 5. Explicit output contract
 6. Validation or consistency checks
@@ -33,7 +33,7 @@ Every skill must define:
 
 1. No fabrication policy
 - Do not invent facts, metrics, dates, or user data
-- Define fallback behavior when user information is incomplete
+- Provide a deterministic way to process large or sensitive data (e.g., using a local script before LLM analysis) to prevent hallucination.
 
 2. Missing data fallback
 - Ask clarification questions first
@@ -45,6 +45,9 @@ Every skill must define:
 
 4. Approval loop
 - Define if user approval is required per phase or per output
+
+5. Output Language Matching
+- Specify a "CRITICAL LANGUAGE RULE" indicating that the agent's output should match the user's conversational language, unless the skill defines specific bilingual or export constraints.
 
 ## Output Contract Checklist
 

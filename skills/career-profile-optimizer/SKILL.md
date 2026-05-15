@@ -50,9 +50,7 @@ For EACH experience, run this loop:
 6. Ask for approval and whether to continue.
 
 Transition rule:
-- If user approves and has another experience, continue loop.
-- If user approves and has no more experiences, go to Phase 3.
-- If no response, send one follow-up before offering continue vs close options.
+- See the **Stop Conditions and Transition Logic** section.
 
 ### Phase 3: Strategic Closing (Headline & About)
 After the user finishes all experiences:
@@ -69,12 +67,27 @@ If `resume-export` mode is ON:
 4. Output specific browser and copy-paste instructions for Word/Google Docs transition as defined in `output-contract.md`.
 
 ## Quick Reference
+
 - One experience per iteration.
 - Clarify before generating.
 - Never invent facts.
 - Use output templates + rubric + gates from `output-contract.md`.
 - Validate before presenting.
 - **Phase 4** triggers at the end if `resume-export: on`.
+
+## Output Contract
+
+**REQUIRED REFERENCE:** You MUST apply all detailed generation and validation rules in `skills/career-profile-optimizer/output-contract.md`.
+
+## Validation or Consistency Checks
+
+See `skills/career-profile-optimizer/output-contract.md` for rubric and quality gates.
+
+## Stop Conditions and Transition Logic
+
+- If user approves and has another experience, continue the loop.
+- If user approves and has no more experiences, advance to Phase 3.
+- If no response, send one follow-up before offering continue vs close options.
 
 ## Output Formatting Best Practices
 1. Start bullets with action verbs.

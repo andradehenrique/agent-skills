@@ -16,6 +16,7 @@ A skill is a markdown file with `name` and `description` YAML frontmatter that d
 | Skill Name | Description |
 |------------|-------------|
 | [career-profile-optimizer](./skills/career-profile-optimizer/SKILL.md) | Iteratively rewrites work experiences for LinkedIn and ATS/PDF, then generates optimized LinkedIn headline and about section for a target role/seniority. |
+| [har-analyzer](./skills/har-analyzer/SKILL.md) | Audits .har (HTTP Archive) files to produce an executive report on performance, API failures, security, and third-party impact. |
 
 ## Per-Skill Details
 

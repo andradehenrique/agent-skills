@@ -1,0 +1,11 @@
+{
+  "skill_name": "har-analyzer",
+  "evals": [
+    {
+      "id": 0,
+      "prompt": "Tenho um arquivo .har gravado localmente (aba Network do Chrome). Analisa e gera o relatório padrão ao lado do arquivo.",
+      "expected_output": "Pasta <nome>.chunks/ ao lado do .har com chunk_api.json, chunk_static.json, chunk_third_party.json e summary.json. Relatório em <nome>.report.md ao lado do .har, seguindo o template da skill (Resumo Executivo numérico, Performance, APIs, Segurança, Terceiros, Recomendações).",
+      "files": []
+    }
+  ]
+}
