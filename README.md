@@ -17,6 +17,7 @@ A skill is a markdown file with `name` and `description` YAML frontmatter that d
 |------------|-------------|
 | [career-profile-optimizer](./skills/career-profile-optimizer/SKILL.md) | Iteratively rewrites work experiences for LinkedIn and ATS/PDF, then generates optimized LinkedIn headline and about section for a target role/seniority. |
 | [har-analyzer](./skills/har-analyzer/SKILL.md) | Audits .har (HTTP Archive) files to produce an executive report on performance, API failures, security, and third-party impact. |
+| [github-engineering-report](./skills/github-engineering-report/SKILL.md) | Generates daily/weekly engineering panoramas from GitHub data with PR analysis, human vs. bot review detection, and optional Jira cross-reference. |
 
 ## Per-Skill Details
 
@@ -24,11 +25,13 @@ To keep this repository scalable as more skills are added, the root README stays
 
 For each skill, use the skill folder as the source of truth:
 - `SKILL.md`: trigger conditions, flow, and boundaries
-- Supporting docs (for example `output-contract.md`): detailed templates, modes, and validation rules
+- `docs/`: design documents and specifications
+- `scripts/`: supporting Python/JavaScript utilities
+- `evals/`: test cases and evaluation prompts
 
-For `career-profile-optimizer`, see:
-- [skills/career-profile-optimizer/SKILL.md](./skills/career-profile-optimizer/SKILL.md)
-- [skills/career-profile-optimizer/output-contract.md](./skills/career-profile-optimizer/output-contract.md)
+For `github-engineering-report`, see:
+- [skills/github-engineering-report/SKILL.md](./skills/github-engineering-report/SKILL.md)
+- [skills/github-engineering-report/docs/2026-06-11-design.md](./skills/github-engineering-report/docs/2026-06-11-design.md)
 
 ## Installation
 

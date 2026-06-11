@@ -1,0 +1,23 @@
+{
+  "skill_name": "github-engineering-report",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Dá o panorama de ontem na engenharia",
+      "expected_output": "HTML report with org-wide KPIs, top PRs, and highlights",
+      "files": []
+    },
+    {
+      "id": 2,
+      "prompt": "Resumo do repo auth-service esta semana",
+      "expected_output": "HTML report with repo-specific activity, PRs, issues, timeline",
+      "files": []
+    },
+    {
+      "id": 3,
+      "prompt": "Timeline do PR #234 no frontend",
+      "expected_output": "HTML report with PR timeline, reviews, comments, verdict",
+      "files": []
+    }
+  ]
+}
