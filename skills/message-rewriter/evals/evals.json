@@ -1,34 +1,59 @@
 {
   "skill_name": "message-rewriter",
+  "notes": "Prompts must not reuse drafts from references/examples.md, so the evals measure generalization rather than copying. For Portuguese drafts, the header labels (Intenção/Tom/Canal) and tone names (Direto/Colaborativo/CNV completa) must be in Portuguese.",
   "evals": [
     {
       "id": 0,
-      "prompt": "comenta no PR: essa query ta fazendo 3 chamadas no banco, ta lento, tem que refatorar isso com join",
-      "expected_output": "Header line with Intenção/Tom: Direto/Canal: PR, in Portuguese. A single Conventional Comments comment starting with 'suggestion:' (not blocking), 1-2 sentences, mentioning the 3 DB round trips and latency and proposing a JOIN as a question. No 'você'. No invented numbers.",
+      "prompt": "comenta no PR: pq tu usou useEffect aqui? isso vai rodar toda hora, coloca no useMemo",
+      "expected_output": "Header in Portuguese: Intenção/Tom: Direto/Canal: PR. One comment with 'suggestion:' (or 'question:'), 1-3 sentences, no 'você/tu', a genuine (non-rhetorical) question about why it's an effect, proposing useMemo. No invented claims about dependencies. Humanizer skipped (short), no Note about it.",
       "files": []
     },
     {
       "id": 1,
-      "prompt": "reescreve pra mandar no canal do time: o fulano subiu sem rodar a migration e quebrou o checkout de novo",
-      "expected_output": "Tom: Colaborativo, Canal: Slack canal, in Portuguese. Message states the fact (deploy without migration, checkout broken) without naming the person and without 'de novo', includes impact and a process-oriented next step. Uses [placeholders] for unknown time/duration instead of inventing them. Note suggests a DM if this is recurring.",
+      "prompt": "comenta no PR: falta teste pra esse caso de erro e o nome handleStuff é horrível",
+      "expected_output": "Header labels in Portuguese. Two separate PR comments, each with its own header: one 'todo:' or 'issue:' about the missing error-path test, one 'nitpick (non-blocking):' about the name, without 'horrível'. Suggested name as [placeholder], not invented. Note flags whether the missing test should block the merge.",
       "files": []
     },
     {
       "id": 2,
-      "prompt": "preciso mandar uma DM: toda vez que eu abro pr o ciclano demora uma semana pra revisar e ainda reclama de coisa que não tem nada a ver, to de saco cheio",
-      "expected_output": "Tom: CNV completa, Canal: Slack DM, in Portuguese. 3-6 sentences in natural prose containing an observation, a feeling owned by the sender, a need and a concrete negotiable request (e.g. agree on a review deadline / scope). No insults, no 'de saco cheio'. Unknown specifics as [placeholders].",
+      "prompt": "manda no canal: pessoal a api de vagas ta lenta desde o deploy de hoje cedo, p95 foi pra 3s, alguem do time de backend pode olhar",
+      "expected_output": "Header in Portuguese, Tom: Direto, Canal: Slack canal. BLUF: slowness and p95 3s in the first sentence, ask to backend. Keeps only facts from the draft (deploy this morning, p95 3s); dashboard/link as [placeholder]. No added emoji, max ~4 lines.",
       "files": []
     },
     {
       "id": 3,
-      "prompt": "Make this a PR comment: this will crash if the user has no company, user.company.id is undefined and the whole page dies",
-      "expected_output": "Output in English. Tone: Direct, Channel: PR. Comment starts with 'issue (blocking):', explains the TypeError when company is missing and that it takes down the page, and asks for a guard/optional chaining before merge. 1-3 sentences.",
+      "prompt": "time de infra, a gente precisa daquele bucket s3 liberado faz 2 semanas e ninguém responde o ticket, assim não dá",
+      "expected_output": "Header in Portuguese, Tom: Colaborativo, Canal: Slack (Infra channel). Removes 'assim não dá'. States the ticket has been open 2 weeks without reply, with [link]/[bucket] placeholders and what it blocks as [placeholder], and asks for an ETA or an owner. No invented deadline or impact.",
       "files": []
     },
     {
       "id": 4,
-      "prompt": "slack: oi pessoal tudo bem? alguém consegue revisar meu pr?",
-      "expected_output": "Tom: Direto, Canal: Slack canal. Single message combining greeting and ask (no-hello), with [link] and [prazo]/size placeholders, since the draft gives neither. Note mentions what to fill in. No invented PR size or deadline.",
+      "prompt": "preciso falar com meu gestor que não vai dar pra entregar a feature de filtros na sprint, o escopo cresceu demais e o design mudou 3 vezes",
+      "expected_output": "Header in Portuguese, Tom: Colaborativo, Canal: Slack DM. Opens with the clear 'won't make it this sprint', gives the two reasons from the draft (scope grew, design changed 3 times), and leaves the proposal/next step as a [placeholder] instead of inventing options. Up to ~6 lines.",
+      "files": []
+    },
+    {
+      "id": 5,
+      "prompt": "DM pro beltrano: ele aprovou meu pr sem ler, de novo, e depois veio reclamar na daily que eu subi bug, isso é ridículo",
+      "expected_output": "Header in Portuguese, Tom: CNV completa, Canal: Slack DM. 'sem ler' replaced by an observable fact as [placeholder] (e.g. approved without comments). Contains observation, a feeling owned by the sender, a need and a concrete negotiable request. No 'ridículo', no 'de novo'. 4+ sentences, so the humanizer path is applied if installed. Note may suggest retro/lead if it keeps happening.",
+      "files": []
+    },
+    {
+      "id": 6,
+      "prompt": "Make this a PR comment: this will crash if the user has no company, user.company.id is undefined and the whole page dies",
+      "expected_output": "Output and header in English. Tone: Direct, Channel: PR. Comment starts with 'issue (blocking):', explains the crash when company is missing and that it takes down the page, and asks for the case to be handled before merge. 1-3 sentences.",
+      "files": []
+    },
+    {
+      "id": 7,
+      "prompt": "can u merge my PR pls, it's been sitting there for days and it's blocking release",
+      "expected_output": "Output and header in English. Tone: Collaborative (deadline follow-up) or Direct. Asks for review/merge with [PR link], mentions it is open for days and blocking the release, and leaves any deadline as a [placeholder]. No invented number of days or date.",
+      "files": []
+    },
+    {
+      "id": 8,
+      "prompt": "escreve algo pro João",
+      "expected_output": "No message is produced. The skill asks one question in Portuguese about what the message needs to say. It does not invent content.",
       "files": []
     }
   ]

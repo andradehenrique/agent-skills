@@ -2,7 +2,7 @@
 name: message-rewriter
 description: Use when the user pastes a rough draft in their own words and wants it turned into a message to send to someone, such as a Slack message, DM, thread reply or code review comment. Also use when they ask to "improve", "rewrite", "make it more objective", "soften", "post on Slack", "comment on the PR" or "reply to someone", or when they seem about to message a teammate, even without naming the channel.
 metadata:
-  version: "1.1.0"
+  version: "1.2.0"
 ---
 
 # Message Rewriter
@@ -91,13 +91,21 @@ Then run the validation checklist below. Fix anything that fails before answerin
 
 ## Output Contract
 
-Reply in exactly this shape, in the draft's language:
+Reply in exactly this shape. **Translate the header labels and the tone name into the draft's language.** The English template below is only the structure:
 
 ```
 **Intent:** <e.g. flag blocking bug> · **Tone:** <Direct | Collaborative | Full NVC> · **Channel:** <PR | Slack channel | Slack DM | ...>
 
 <message ready to paste, inside a code block so formatting is preserved>
 ```
+
+For a Portuguese draft, the header is:
+
+```
+**Intenção:** <ex.: apontar bug bloqueante> · **Tom:** <Direto | Colaborativo | CNV completa> · **Canal:** <PR | Slack canal | Slack DM | ...>
+```
+
+The optional lines follow the same rule: **Alternativa** and **Nota** in Portuguese, for example.
 
 After the block, add at most two optional lines:
 
@@ -118,7 +126,7 @@ Before answering, reread the message as the recipient would:
 - [ ] Does any sentence read as a personal attack, sarcasm or public blame?
 - [ ] Can any sentence go without losing information? Cut it.
 - [ ] Is it within the length limit for the channel and tone?
-- [ ] Is it in the draft's language?
+- [ ] Are the message, the header labels, the tone name and the Note all in the draft's language?
 
 ## Failure and Fallback Handling
 
