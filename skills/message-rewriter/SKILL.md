@@ -2,7 +2,7 @@
 name: message-rewriter
 description: Use when the user pastes a rough draft in their own words and wants it turned into a message to send to someone, such as a Slack message, DM, thread reply or code review comment. Also use when they ask to "improve", "rewrite", "make it more objective", "soften", "post on Slack", "comment on the PR" or "reply to someone", or when they seem about to message a teammate, even without naming the channel.
 metadata:
-  version: "1.2.0"
+  version: "1.2.1"
 ---
 
 # Message Rewriter
@@ -62,6 +62,7 @@ These signals mean the tone should go up a level: words like "again", "always", 
 These rules apply to every tone:
 
 - **Explicit ask.** The reader must know what to do, by when, and whether it blocks. If there is no ask because the message is informational, say so ("just for context", `note:`).
+- **Blocking status is the user's call.** On a PR, use `(blocking)` only when the draft says it blocks or describes a crash, data loss, security hole or regression. If the draft does not settle it (e.g. "missing test"), pick the most likely label **and always add a Note** asking whether it should block the merge. This Note is mandatory: never leave the doubt only in your reasoning.
 - **No "no hello".** Greeting, context and question go in the same message. Never end with "can I ask you something?".
 - **Code, not person.** Write "this loop allocates on every iteration", not "you wrote a loop that allocates".
 - **Real questions, not rhetorical ones.** "What do you think about a Map?" works. "Why didn't you use a Map?" reads as a reprimand.
@@ -120,7 +121,7 @@ Do not explain the technique, list what changed or praise the draft. If the user
 
 Before answering, reread the message as the recipient would:
 
-- [ ] Is it clear what to do, by when, and whether it blocks?
+- [ ] Is it clear what to do, by when, and whether it blocks? If the draft didn't say whether it blocks, is there a Note asking?
 - [ ] Is every fact in the draft or the conversation? Is everything else a `[placeholder]`?
 - [ ] Is the user's position (agree, disagree, block, approve) unchanged?
 - [ ] Does any sentence read as a personal attack, sarcasm or public blame?
@@ -134,7 +135,7 @@ Before answering, reread the message as the recipient would:
 |---|---|
 | Humanizer missing or failed on a long message | Use `references/humanizer-fallback.md` and add one line to the Note. |
 | Short message (3 sentences or fewer) | Use `references/humanizer-fallback.md` without a Note. This is the expected path, not a failure. |
-| Draft is ambiguous about blocking or recipient | Write the most likely version with a `[placeholder]` and flag it in the Note. |
+| Draft is ambiguous about blocking or recipient | Write the most likely version with a `[placeholder]` and flag it in the Note. The Note is mandatory, not optional. |
 | Draft mixes unrelated topics | Deliver two messages, each with its own header line. |
 | Draft contains offensive content or personal attacks | Rewrite around the underlying fact and request. Never keep the attack. Suggest a synchronous conversation in the Note. |
 | No usable content (e.g. "write something to John") | Ask one question about what the message needs to say. |
