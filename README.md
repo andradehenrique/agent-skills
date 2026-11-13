@@ -18,6 +18,7 @@ A skill is a markdown file with `name` and `description` YAML frontmatter that d
 | [career-profile-optimizer](./skills/career-profile-optimizer/SKILL.md) | Iteratively rewrites work experiences for LinkedIn and ATS/PDF, then generates optimized LinkedIn headline and about section for a target role/seniority. |
 | [har-analyzer](./skills/har-analyzer/SKILL.md) | Audits .har (HTTP Archive) files to produce an executive report on performance, API failures, security, and third-party impact. |
 | [github-engineering-report](./skills/github-engineering-report/SKILL.md) | Generates daily/weekly engineering panoramas from GitHub data with PR analysis, human vs. bot review detection, and optional Jira cross-reference. |
+| [message-rewriter](./skills/message-rewriter/SKILL.md) | Turns a rough draft into a ready-to-paste Slack message or code review comment, picking the tone from the detected intent: Direct (BLUF, Conventional Comments), Collaborative (condensed NVC) or Full NVC for real conflict. |
 
 ## Per-Skill Details
 
@@ -32,6 +33,22 @@ For each skill, use the skill folder as the source of truth:
 For `github-engineering-report`, see:
 - [skills/github-engineering-report/SKILL.md](./skills/github-engineering-report/SKILL.md)
 - [skills/github-engineering-report/docs/2026-06-11-design.md](./skills/github-engineering-report/docs/2026-06-11-design.md)
+
+### message-rewriter
+
+Paste your draft in your own words, with the channel if you know it, and get back one header line (intent, tone, channel) and the message in a code block, in the draft's language.
+
+```
+/message-rewriter comment on the PR: this query hits the DB 3 times, it's slow, should be a join
+```
+
+- **Tones:** Direct for most technical messages. Collaborative for disagreeing, saying no, following up or pointing out a mistake. Full NVC only for real conflict or behavior feedback.
+- **Humanizer:** if the [`humanizer`](https://github.com/blader/humanizer) skill is installed, the draft goes through it before final formatting. If not, a built-in checklist is used and the skill never blocks.
+- **Iterative:** ask for "shorter", "softer" or "more direct" and it adjusts the last version.
+- **Never sends anything.** It only writes text.
+- **When not to use:** long documents (PR descriptions, tickets, RFCs), plain translation, or legal/HR communication.
+
+References: [techniques and intent map](./skills/message-rewriter/references/techniques.md), [examples (pt-BR)](./skills/message-rewriter/references/examples.md).
 
 ## Installation
 

@@ -1,0 +1,35 @@
+{
+  "skill_name": "message-rewriter",
+  "evals": [
+    {
+      "id": 0,
+      "prompt": "comenta no PR: essa query ta fazendo 3 chamadas no banco, ta lento, tem que refatorar isso com join",
+      "expected_output": "Header line with Intenção/Tom: Direto/Canal: PR, in Portuguese. A single Conventional Comments comment starting with 'suggestion:' (not blocking), 1-2 sentences, mentioning the 3 DB round trips and latency and proposing a JOIN as a question. No 'você'. No invented numbers.",
+      "files": []
+    },
+    {
+      "id": 1,
+      "prompt": "reescreve pra mandar no canal do time: o fulano subiu sem rodar a migration e quebrou o checkout de novo",
+      "expected_output": "Tom: Colaborativo, Canal: Slack canal, in Portuguese. Message states the fact (deploy without migration, checkout broken) without naming the person and without 'de novo', includes impact and a process-oriented next step. Uses [placeholders] for unknown time/duration instead of inventing them. Note suggests a DM if this is recurring.",
+      "files": []
+    },
+    {
+      "id": 2,
+      "prompt": "preciso mandar uma DM: toda vez que eu abro pr o ciclano demora uma semana pra revisar e ainda reclama de coisa que não tem nada a ver, to de saco cheio",
+      "expected_output": "Tom: CNV completa, Canal: Slack DM, in Portuguese. 3-6 sentences in natural prose containing an observation, a feeling owned by the sender, a need and a concrete negotiable request (e.g. agree on a review deadline / scope). No insults, no 'de saco cheio'. Unknown specifics as [placeholders].",
+      "files": []
+    },
+    {
+      "id": 3,
+      "prompt": "Make this a PR comment: this will crash if the user has no company, user.company.id is undefined and the whole page dies",
+      "expected_output": "Output in English. Tone: Direct, Channel: PR. Comment starts with 'issue (blocking):', explains the TypeError when company is missing and that it takes down the page, and asks for a guard/optional chaining before merge. 1-3 sentences.",
+      "files": []
+    },
+    {
+      "id": 4,
+      "prompt": "slack: oi pessoal tudo bem? alguém consegue revisar meu pr?",
+      "expected_output": "Tom: Direto, Canal: Slack canal. Single message combining greeting and ask (no-hello), with [link] and [prazo]/size placeholders, since the draft gives neither. Note mentions what to fill in. No invented PR size or deadline.",
+      "files": []
+    }
+  ]
+}
