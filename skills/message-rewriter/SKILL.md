@@ -2,7 +2,7 @@
 name: message-rewriter
 description: Use when the user pastes a rough draft in their own words and wants it turned into a message to send to someone, such as a Slack message, DM, thread reply or code review comment. Also use when they ask to "improve", "rewrite", "make it more objective", "soften", "post on Slack", "comment on the PR" or "reply to someone", or when they seem about to message a teammate, even without naming the channel.
 metadata:
-  version: "1.0.0"
+  version: "1.1.0"
 ---
 
 # Message Rewriter
@@ -75,8 +75,11 @@ On PRs, follow Conventional Comments (`label [decorations]: subject`, plus an op
 
 This pass runs after the draft and before the final formatting, so the formatting is not stripped out.
 
-1. **If the `humanizer` skill is available** (it is in the harness skill list, or a `SKILL.md` exists in `~/.claude/skills/humanizer/`, `~/.agents/skills/humanizer/`, `.claude/skills/humanizer/` or `.agents/skills/humanizer/`), apply it to the draft. Invoke it through the skills tool, or read its `SKILL.md` and follow its rules. Ask it to keep the meaning, the chosen tone and any Conventional Comments prefix.
-2. **Otherwise, or on any error**, apply `references/humanizer-fallback.md` and continue.
+1. **Short message** (every message in the output has 3 sentences or fewer, not counting code blocks): skip the `humanizer` and apply `references/humanizer-fallback.md`. At this size the full skill costs much more context than it fixes. Do not mention the skip in the Note.
+2. **Longer message** (any message with 4 or more sentences, usually Full NVC or an escalation), **if the `humanizer` skill is available** (it is in the harness skill list, or a `SKILL.md` exists in `~/.claude/skills/humanizer/`, `~/.agents/skills/humanizer/`, `.claude/skills/humanizer/` or `.agents/skills/humanizer/`): apply it to the draft. Invoke it through the skills tool, or read its `SKILL.md` and follow its rules. Ask it to keep the meaning, the chosen tone, every `[placeholder]` and any Conventional Comments prefix. When several messages are long, run them in a single humanizer pass.
+3. **Longer message without the humanizer, or on any error**: apply `references/humanizer-fallback.md` and continue.
+
+The user can override this. "Use the humanizer" forces step 2 on any length, and "skip the humanizer" forces the checklist.
 
 ### Phase 5: Format and check
 
@@ -99,7 +102,7 @@ Reply in exactly this shape, in the draft's language:
 After the block, add at most two optional lines:
 
 - **Alternative**, only when the tone is genuinely ambiguous: the version in the neighboring tone, also in a code block.
-- **Note**: a placeholder the user must fill, a risk you noticed ("this calls the person out in public; consider a DM"), or "humanizer not found, used the built-in checklist".
+- **Note**: a placeholder the user must fill, a risk you noticed ("this calls the person out in public; consider a DM"), or, only for a long message, "humanizer not found, used the built-in checklist".
 
 Do not explain the technique, list what changed or praise the draft. If the user wants to understand the choice, they will ask.
 
@@ -121,7 +124,8 @@ Before answering, reread the message as the recipient would:
 
 | Situation | Behavior |
 |---|---|
-| Humanizer missing or failed | Use `references/humanizer-fallback.md` and add one line to the Note. |
+| Humanizer missing or failed on a long message | Use `references/humanizer-fallback.md` and add one line to the Note. |
+| Short message (3 sentences or fewer) | Use `references/humanizer-fallback.md` without a Note. This is the expected path, not a failure. |
 | Draft is ambiguous about blocking or recipient | Write the most likely version with a `[placeholder]` and flag it in the Note. |
 | Draft mixes unrelated topics | Deliver two messages, each with its own header line. |
 | Draft contains offensive content or personal attacks | Rewrite around the underlying fact and request. Never keep the attack. Suggest a synchronous conversation in the Note. |

@@ -1,6 +1,6 @@
 # Anti-AI-writing checklist (fallback)
 
-Use this only when the `humanizer` skill is not available. Go through the draft once and fix what you find. The goal is for the message to sound like the user on a good day, not like an assistant.
+Use this for every short message (3 sentences or fewer), and for longer messages when the `humanizer` skill is not available. Go through the draft once and fix what you find. The goal is for the message to sound like the user on a good day, not like an assistant.
 
 It is based on Wikipedia's "Signs of AI writing" guide, adapted for short messages in any language. The examples are in English. Look for the equivalent pattern in the draft's language.
 

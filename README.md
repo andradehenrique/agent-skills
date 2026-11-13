@@ -43,7 +43,7 @@ Paste your draft in your own words, with the channel if you know it, and get bac
 ```
 
 - **Tones:** Direct for most technical messages. Collaborative for disagreeing, saying no, following up or pointing out a mistake. Full NVC only for real conflict or behavior feedback.
-- **Humanizer:** if the [`humanizer`](https://github.com/blader/humanizer) skill is installed, the draft goes through it before final formatting. If not, a built-in checklist is used and the skill never blocks.
+- **Humanizer:** messages of 4 or more sentences go through the [`humanizer`](https://github.com/blader/humanizer) skill before final formatting, if it is installed. Short messages, or any message when the humanizer is missing, use a built-in checklist, and the skill never blocks. You can force either path ("use the humanizer" / "skip the humanizer").
 - **Iterative:** ask for "shorter", "softer" or "more direct" and it adjusts the last version.
 - **Never sends anything.** It only writes text.
 - **When not to use:** long documents (PR descriptions, tickets, RFCs), plain translation, or legal/HR communication.
