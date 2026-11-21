@@ -76,7 +76,7 @@ This emits `theme.css` with `--b-*` variables and `tailwind-theme.css` with the 
 - **B:** monogram when C would break at small sizes.
 - **A:** wordmark alone when the symbol idea is too detailed.
 
-All variants share one grid and angle, use `currentColor`, stay legible at 16px, and keep a breathing area equal to the spacing unit `S`. Test on light and dark before showing the result. If the user pastes a detailed illustrative logo idea that cannot survive 16px, degrade to B or A and explain why. Use `references/logo.md` for construction, the 16px test and the fallback rules.
+All variants share one grid and angle, stay legible at 16px, and keep a breathing area equal to the spacing unit `S`; the symbol uses `currentColor`, while a monogram tile uses a single solid brand fill (`bg-primary` + `text-on-primary`). Test on light and dark before showing the result. If the user pastes a detailed illustrative logo idea that cannot survive 16px, degrade to B or A and explain why. Use `references/logo.md` for construction, the 16px test and the fallback rules.
 
 ### Phase 3: Manual — the mandatory gate
 
@@ -126,7 +126,7 @@ All paths are relative to the user's working directory. Nothing is written insid
 | `brand.json` | Approved decisions: purpose, persona, territory, archetype, attributes, named primary/secondary colors with hex, allowed pairs, gradient 50/50 at 45°, display/body fonts, scale, 8px unit, logo variant, and the `aceite` flag. |
 | `theme.css` | `--b-*` custom properties for colors, type, spacing, radius and theme switching. |
 | `tailwind-theme.css` | Maps the `--b-*` variables to semantic utilities such as `bg-surface`, `text-fg-muted`, `border-line`. |
-| `logo.svg` | The chosen logo variant, one color via `currentColor`, with viewBox and accessible title. |
+| `logo.svg` | The chosen logo variant: symbol in one color via `currentColor`, monogram tile as a single solid brand fill, with viewBox and accessible title. |
 | `marca-manual.html` | The single-file manual described in Phase 3; the approval artifact. |
 | Format HTML files | One file per confirmed format (`onepage`, `deck`, `report`, `social`), single-file, mobile-first, light/dark, tokens only. |
 
@@ -139,7 +139,7 @@ Before delivering, confirm:
 - [ ] `brand.json` parses and every color pair used in the HTML is in its allowed pairs.
 - [ ] `check_page.py` reports zero ERROR on each HTML file.
 - [ ] One `<main>`, one `h1`, heading order intact, accessible names on controls, tables with `caption` and `th`.
-- [ ] Logo sprite present in `<body>`; logo legible at 16px, one color via `currentColor`, breathing area = `S`.
+- [ ] Logo sprite present in `<body>`; logo legible at 16px; symbol is one color via `currentColor` and a monogram tile is a single solid brand fill; breathing area = `S`.
 - [ ] Contrast meets WCAG 2.2 AA in light and dark; gradient has exactly two stops at 45°.
 - [ ] Type sizes belong to the scale; spacing is a multiple of 8px.
 - [ ] Copy contains no invented fact; unresolved facts use `[placeholder]` and appear in the delivery note.

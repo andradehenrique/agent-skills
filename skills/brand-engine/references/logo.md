@@ -132,7 +132,7 @@ angle family, `currentColor`. That is C: symbol + “Forno & Brasa” wordmark.
 - [ ] Variant chosen by the cascade, not by preference: C → B → A.
 - [ ] Recognizable at 16px on light and dark; 16/24/48px samples checked.
 - [ ] Two or three shapes, one idea, no text inside the symbol.
-- [ ] One color via `currentColor`; no hex, gradient, shadow or filter.
+- [ ] Symbol is one color via `currentColor`; a monogram tile is a single solid brand fill (`bg-primary` + `text-on-primary` in HTML). No hex, gradient, shadow or filter.
 - [ ] `viewBox` square; `role`/`<title>` on standalone SVG; `#be-mark` kept in
       the sprite.
 - [ ] Breathing area S = 8px (`--b-space-1`) on all sides.
