@@ -1,0 +1,48 @@
+{
+  "version": 2,
+  "name": "Maison Verre",
+  "purpose": "Compor perfumes de autor em pequenos lotes, para quem prefere memória a tendência.",
+  "persona": "Colecionadores e quem procura presente de alto valor simbólico.",
+  "territory": "silêncio, vidro e ouro velho",
+  "archetype": "Amante",
+  "attributes": ["sóbrio", "sensorial", "raro", "atemporal"],
+  "voice": {
+    "summary": "Descreve matéria e memória; nunca promete status.",
+    "principles": ["substantivo concreto", "ritmo lento", "silêncio entre frases"],
+    "avoid": ["superlativo", "urgência", "nome de celebridade"],
+    "person": "você",
+    "emoji": "none"
+  },
+  "design": {
+    "colors": {
+      "canvas": {"name": "Noite", "hex": "#0B0A09"},
+      "surface": {"name": "Fumê", "hex": "#16130F"},
+      "ink": {"name": "Marfim", "hex": "#F2EBDD"},
+      "primary": {"name": "Ouro Velho", "hex": "#C6A15B"},
+      "accent": {"name": "Ameixa", "hex": "#6E3B52"},
+      "support": [{"name": "Pedra", "hex": "#8C8577"}]
+    },
+    "feedback": {"warning": "#D9A441"},
+    "charts": ["#C6A15B", "#8C8577", "#6E3B52", "#5C7A6B", "#B9AA8C", "#7A5C48"],
+    "type": {
+      "display": {"family": "Cormorant Garamond", "fallback": "Georgia, serif", "weight": 500, "tracking": "0.01em"},
+      "body": {"family": "Inter", "fallback": "system-ui, sans-serif", "weight": 300},
+      "scale": {"base": 16, "ratio": 1.25}
+    },
+    "shape": {"radius": {"xs": 0, "sm": 2, "md": 4, "lg": 8, "xl": 12}, "unit": 8, "shadows": "strong"},
+    "theme": {
+      "modes": ["dark"],
+      "default": "dark",
+      "gradient": {"from": "Ouro Velho", "to": "Ameixa", "angle": 120, "via": "Marfim"}
+    },
+    "icons": {"family": "phosphor", "style": "thin", "size": 16},
+    "imagery": {
+      "mode": "photo",
+      "treatment": "fundo escuro, luz lateral, grão fino",
+      "placeholder": "placehold"
+    },
+    "composition": {"direction": "minimal", "measure": "60ch", "grid": "12"},
+    "logo": {"variant": "A", "name": "Verre", "notes": "Wordmark em caixa alta espaçada."}
+  },
+  "aceite": false
+}

@@ -1,0 +1,46 @@
+{
+  "version": 2,
+  "name": "Concreto",
+  "purpose": "Tornar visível o que a cidade esconde atrás do concreto.",
+  "persona": "Jovens arquitetos, produtores culturais e coletivos de bairro.",
+  "territory": "brutalista gráfico, tipografia densa e cor de sinalização",
+  "archetype": "Rebelde",
+  "attributes": ["cru", "direto", "urbano", "político"],
+  "voice": {
+    "summary": "Fala como pichação organizada: curto, alto, sem pedir licença.",
+    "principles": ["frase curta", "contraste alto", "sem adjetivo decorativo"],
+    "avoid": ["suavização", "corporativês"],
+    "person": "você",
+    "emoji": "none"
+  },
+  "design": {
+    "colors": {
+      "canvas": {"name": "Asfalto", "hex": "#EDEBE6"},
+      "surface": {"name": "Cal", "hex": "#FFFFFF"},
+      "ink": {"name": "Piche", "hex": "#0E0E0E"},
+      "primary": {"name": "Sinal", "hex": "#FF4D00"},
+      "accent": {"name": "Azul Canteiro", "hex": "#1F3BFF"},
+      "support": [{"name": "Verde Tapume", "hex": "#0F7B4F"}]
+    },
+    "feedback": "auto",
+    "charts": "auto",
+    "type": {
+      "display": {
+        "family": "Archivo Black",
+        "fallback": "Impact, sans-serif",
+        "weight": 900,
+        "tracking": "-0.02em",
+        "case": "uppercase"
+      },
+      "body": {"family": "IBM Plex Mono", "fallback": "ui-monospace, monospace", "weight": 400},
+      "scale": {"base": 16, "ratio": 1.333}
+    },
+    "shape": {"radius": "sharp", "unit": 4, "shadows": "none"},
+    "theme": {"modes": ["light"], "default": "light", "gradient": null},
+    "icons": {"family": "lucide", "style": "bold", "size": 20},
+    "imagery": {"mode": "none", "treatment": "sem imagem; textura de concreto via CSS", "placeholder": "placehold"},
+    "composition": {"direction": "poster", "measure": "55ch", "grid": "6"},
+    "logo": {"variant": "B", "name": "Bloco", "notes": "Monograma em bloco sólido."}
+  },
+  "aceite": false
+}

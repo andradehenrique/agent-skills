@@ -1,35 +1,45 @@
 {
   "$schema": "https://brand-engine.local/brand.schema.json",
-  "version": 1,
-  "name": "Forno & Brasa",
-  "purpose": "Levar pizza de fermentação longa e assada na lenha para a mesa de bairro, sem cerimônia.",
-  "persona": "Famílias e casais de 25 a 45 anos que pedem pizza no fim de semana e valorizam massa artesanal.",
-  "territory": "Rústico contemporâneo: barro, fogo e madeira, com acabamento limpo.",
-  "archetype": "O Criador",
-  "attributes": ["rústico", "caloroso", "direto", "artesanal"],
-  "colors": {
-    "primary": [
-      {"name": "Brasa", "hex": "#A6402F", "note": "ação e assinatura"},
-      {"name": "Terracota", "hex": "#C97B4A", "note": "apoio quente"}
-    ],
-    "secondary": [
-      {"name": "Oliva", "hex": "#5F6B45", "note": "frescor e contraste"},
-      {"name": "Creme", "hex": "#F4E9D8", "note": "superfície clara"}
-    ]
+  "version": 2,
+  "name": "Omnia Labs",
+  "purpose": "Traduzir IA em operação real para empresas que precisam decidir agora.",
+  "persona": "Donos e diretores de PMEs que já sentem a pressão da IA.",
+  "territory": "editorial humanista com precisão técnica",
+  "archetype": "Sábio",
+  "attributes": ["claro", "humano", "preciso", "sem jargão"],
+  "voice": {
+    "summary": "Explica antes de vender; mostra o método.",
+    "principles": ["conclusão primeiro", "número com base", "zero jargão"],
+    "avoid": ["hype de IA", "promessa sem dono"],
+    "person": "você",
+    "emoji": "none"
   },
-  "allowed_pairs": [
-    {"bg": "Brasa", "fg": "Creme", "use": "CTA e faixa de marca"},
-    {"bg": "Creme", "fg": "Brasa", "use": "texto sobre superfície clara"},
-    {"bg": "Oliva", "fg": "Creme", "use": "selo e rodapé"},
-    {"bg": "Creme", "fg": "Oliva", "use": "apoio sobre superfície clara"}
-  ],
-  "gradient": {"from": "Brasa", "to": "Terracota", "angle": 45},
-  "fonts": {
-    "display": {"family": "Fraunces", "fallback": "Georgia, serif"},
-    "body": {"family": "Source Sans 3", "fallback": "system-ui, sans-serif"}
+  "design": {
+    "colors": {
+      "canvas": {"name": "Papel", "hex": "#FBF8F1"},
+      "surface": {"name": "Giz", "hex": "#FFFFFF"},
+      "ink": {"name": "Tinta", "hex": "#1E1C17"},
+      "primary": {"name": "Petróleo", "hex": "#0F5A6B"},
+      "accent": {"name": "Areia", "hex": "#E8DFCE"},
+      "support": [{"name": "Oliva", "hex": "#7C8363"}]
+    },
+    "feedback": "auto",
+    "charts": "auto",
+    "type": {
+      "display": {"family": "Newsreader", "fallback": "Georgia, serif", "weight": 600},
+      "body": {"family": "Source Sans 3", "fallback": "system-ui, sans-serif", "weight": 400},
+      "scale": {"base": 16, "ratio": 1.25}
+    },
+    "shape": {"radius": "soft", "unit": 8, "shadows": "soft"},
+    "theme": {
+      "modes": ["light", "dark"],
+      "default": "light",
+      "gradient": null
+    },
+    "icons": {"family": "fluent", "style": "regular", "size": 16},
+    "imagery": {"mode": "abstract", "treatment": "papel, grão leve", "placeholder": "placehold"},
+    "composition": {"direction": "editorial", "measure": "65ch", "grid": "12"},
+    "logo": {"variant": "C", "name": "Colchete", "notes": "Dois colchetes e um bloco."}
   },
-  "scale": {"base": 16, "ratio": 1.25},
-  "unit": 8,
-  "logo": {"variant": "C", "name": "Chama", "notes": "Duas formas geométricas: chama e arco de forno."},
   "aceite": false
 }

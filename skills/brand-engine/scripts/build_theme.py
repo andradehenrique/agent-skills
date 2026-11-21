@@ -1,122 +1,140 @@
 #!/usr/bin/env python3
-"""Brand Engine theme builder.
+"""Brand Engine brand model (schema v2).
 
-Reads the approved ``brand.json`` and writes ``theme.css`` (``--b-*`` custom
-properties, light and dark) plus ``tailwind-theme.css`` (semantic utility
-mapping) into ``--out``.
+Reads and validates the approved ``brand.json`` v2. This module is the single
+source of truth for the brand contract: every other script (theme builder,
+page generator, checker) consumes ``load_brand``/``_build_model`` instead of
+re-parsing JSON.
 
-Contract (shared with ``SKILL.md`` and consumed by ``new_page.py``)::
+Contract (schema v2, the final one -- there is no v1 compatibility)::
 
-    build_theme(brand_path, out_dir, force=False)
-        -> ThemeBuild(theme_css, tailwind_theme_css)
+    {
+      "version": 2,
+      "name": "...",                     # optional, defaults to "Brand"
+      "purpose": "...",                  # required
+      "persona": "...",                  # required
+      "territory": "...",                # required
+      "archetype": "...",                # required
+      "attributes": ["...", ...],        # required, non-empty
+      "voice": {                         # optional, see DEFAULT_VOICE
+        "summary": "...", "principles": ["..."], "avoid": ["..."],
+        "person": "você", "emoji": "none" | "social-only"
+      },
+      "design": {
+        "colors": {                      # canvas, surface, ink, primary required
+          "canvas": {"name": "...", "hex": "#RRGGBB", "note": "..."},
+          "surface": {...}, "ink": {...}, "primary": {...},
+          "accent": {...},               # optional
+          "support": [{...}, ...]        # optional
+        },
+        "feedback": "auto" | {"success": "#RRGGBB", ...},
+        "charts": "auto" | ["#RRGGBB", ...],
+        "type": {
+          "display": {"family": "...", "fallback": "...", "weight": 600,
+                      "tracking": "normal", "case": "none"},
+          "body": {...},
+          "scale": {"base": 16, "ratio": 1.25}
+        },
+        "shape": {"radius": "soft" | {...}, "unit": 8, "shadows": "soft"},
+        "theme": {"modes": ["light", "dark"], "default": "light",
+                  "gradient": null | {"from": "...", "to": "...",
+                                      "angle": 45, "via": "..."}},
+        "icons": {"family": "fluent", "style": "regular", "size": 16},
+        "imagery": {"mode": "abstract", "treatment": "...", "placeholder": "placehold"},
+        "composition": {"direction": "structured", "measure": "65ch", "grid": "12"},
+        "logo": {"variant": "C", "name": "...", "notes": "..."}
+      },
+      "aceite": false                    # manual approval flag
+    }
 
-``theme.css`` and ``tailwind-theme.css`` are also written to ``out_dir``.
-Existing files are never replaced without ``force=True`` (CLI ``--force``).
+``version: 1``, ``colors.primary``/``colors.secondary`` lists, ``allowed_pairs``
+and a fixed ``unit: 8`` are rejected on purpose: the v2 schema is the final
+contract.
 
 Brand discovery order (CLI): ``--brand <path>`` > ``./brand.json`` >
-``./brand/brand.json`` > ask the user. The CLI prints an actionable message
-and exits 2 when no brand is found, instead of raising a traceback.
-
-brand.json schema v1
---------------------
-
-Required keys (all strings unless noted)::
-
-    purpose        one sentence
-    persona        who the brand serves
-    territory      visual territory
-    archetype      brand archetype
-    attributes     non-empty list of short strings, e.g. ["rustico", "direto"]
-    colors         {"primary": [color, ...], "secondary": [color, ...]}
-    allowed_pairs  [{"bg": "<color name>", "fg": "<color name>", "use": "..."}]
-    gradient       {"from": "<color name>", "to": "<color name>", "angle": 45}
-    fonts          {"display": {"family": "Fraunces", "fallback": "Georgia, serif"},
-                    "body": {"family": "Source Sans 3", "fallback": "system-ui, sans-serif"}}
-    scale          {"base": 16, "ratio": 1.25}
-    unit           8 (the 8px grid is fixed in V1)
-    logo           {"variant": "C" | "B" | "A", "name": "...", "notes": "..."}
-    aceite         false until the user approves the manual
-
-Optional keys: ``name`` (brand name), ``version`` (must be 1 when present),
-``$schema`` and other metadata. A color object is::
-
-    {"name": "Brasa", "hex": "#A6402F", "note": "optional"}
-
-``--b-color-<slug>`` keeps the approved hex for every named color. Semantic
-tokens (``--b-primary``, ``--b-fg``, ...) may shift slightly to meet WCAG
-contrast; the gradient always uses the approved hex pair.
-
-Usage limits for generated tokens:
-
-- ``--b-primary`` is guaranteed 3:1 against the canvas, and ``--b-on-primary``
-  stays at 4.5:1 against both ``--b-primary`` and ``--b-primary-hover``, so
-  primary is for UI fills and large text only. Body text uses ``--b-link`` or
-  ``--b-fg``.
-- ``--b-line`` and ``--b-line-strong`` are decorative separators.
-  ``--b-line-input`` is guaranteed 3:1 against surface and canvas for control
-  boundaries (WCAG 1.4.11).
+``./brand/brand.json`` > ask the user. A missing brand never raises a
+traceback: callers use :func:`resolve_brand_path` and
+:func:`missing_brand_behavior`.
 """
 
 from __future__ import annotations
 
-import argparse
 import json
 import re
-import sys
 import unicodedata
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Iterable, NamedTuple
+from typing import Any, Iterable
 
-THEME_FILE = "theme.css"
-TAILWIND_FILE = "tailwind-theme.css"
+# ---------------------------------------------------------------------------
+# Contract constants
+# ---------------------------------------------------------------------------
 
-ASSETS_DIR = Path(__file__).resolve().parent.parent / "assets"
-TEMPLATE_FILE = ASSETS_DIR / "theme-template.css"
+REQUIRED_COLOR_ROLES: tuple[str, ...] = ("canvas", "surface", "ink", "primary")
+OPTIONAL_COLOR_ROLES: tuple[str, ...] = ("accent", "support")
+FEEDBACK_ROLES: tuple[str, ...] = ("success", "warning", "danger", "info")
+THEME_MODES: tuple[str, ...] = ("light", "dark")
+SHADOWS: tuple[str, ...] = ("none", "soft", "strong")
+ICON_FAMILIES: tuple[str, ...] = ("fluent", "lucide", "phosphor", "tabler")
+IMAGERY_MODES: tuple[str, ...] = ("photo", "illustration", "abstract", "none")
+COMPOSITION_DIRECTIONS: tuple[str, ...] = ("editorial", "structured", "poster", "minimal")
+LOGO_VARIANTS: tuple[str, ...] = ("C", "B", "A")
+TEXT_CASES: tuple[str, ...] = ("none", "uppercase", "lowercase", "capitalize")
+VOICE_EMOJI: tuple[str, ...] = ("none", "social-only")
 
-UNIT_PX = 8
-GRADIENT_ANGLE = 45
-
-TYPE_STEPS: tuple[tuple[str, int], ...] = (
-    ("xs", -2),
-    ("sm", -1),
-    ("base", 0),
-    ("lg", 1),
-    ("xl", 2),
-    ("2xl", 3),
-    ("3xl", 4),
-    ("4xl", 5),
-    ("5xl", 6),
-    ("6xl", 7),
+DESIGN_KEYS: tuple[str, ...] = (
+    "colors",
+    "feedback",
+    "charts",
+    "type",
+    "shape",
+    "theme",
+    "icons",
+    "imagery",
+    "composition",
+    "logo",
 )
 
-SEMANTIC_COLOR_KEYS: tuple[str, ...] = (
-    "canvas",
-    "surface",
-    "surface-muted",
-    "surface-raised",
-    "band",
-    "on-band",
-    "on-band-muted",
-    "band-accent",
-    "fg",
-    "fg-muted",
-    "fg-subtle",
-    "fg-disabled",
-    "line",
-    "line-strong",
-    "line-input",
-    "primary",
-    "primary-hover",
-    "on-primary",
-    "primary-soft",
-    "on-primary-soft",
-    "accent",
-    "link",
-    "focus",
-    "highlight",
-    "on-highlight",
+# Top-level keys from the v1 schema. They are rejected explicitly so a stale
+# brand.json fails loudly instead of being silently ignored.
+V1_TOP_LEVEL_KEYS: tuple[str, ...] = (
+    "colors",
+    "allowed_pairs",
+    "gradient",
+    "fonts",
+    "scale",
+    "unit",
 )
+
+# Radius profiles: xs, sm, md, lg, xl (+ full). The defaults in the builder
+# mirror the design spec: sharp 0/0/2/4/4, soft 4/8/12/16/24, round
+# 8/12/16/24/9999.
+RADIUS_PROFILES: dict[str, dict[str, float]] = {
+    "sharp": {"xs": 0, "sm": 0, "md": 2, "lg": 4, "xl": 4, "full": 9999},
+    "soft": {"xs": 4, "sm": 8, "md": 12, "lg": 16, "xl": 24, "full": 9999},
+    "round": {"xs": 8, "sm": 12, "md": 16, "lg": 24, "xl": 9999, "full": 9999},
+}
+RADIUS_KEYS: tuple[str, ...] = ("xs", "sm", "md", "lg", "xl", "full")
+
+DEFAULT_UNIT = 8
+DEFAULT_RADIUS = "soft"
+DEFAULT_SHADOWS = "soft"
+DEFAULT_MODES: tuple[str, ...] = ("light", "dark")
+DEFAULT_TYPE_FAMILY = "system-ui"
+DEFAULT_SCALE = (16.0, 1.25)
+DEFAULT_ICONS: dict[str, Any] = {"family": "fluent", "style": "regular", "size": 16}
+DEFAULT_IMAGERY: dict[str, Any] = {
+    "mode": "abstract",
+    "treatment": "",
+    "placeholder": "placehold",
+}
+DEFAULT_COMPOSITION: dict[str, Any] = {
+    "direction": "structured",
+    "measure": "65ch",
+    "grid": "12",
+}
+DEFAULT_LOGO: dict[str, str] = {"variant": "C", "name": "", "notes": ""}
+DEFAULT_VOICE_SUMMARY = "[placeholder — resumo da voz]"
 
 _HEX_RE = re.compile(r"^#[0-9a-fA-F]{6}$")
 
@@ -125,34 +143,53 @@ class BrandError(ValueError):
     """A malformed or incomplete brand.json, or an unusable --brand path."""
 
 
-class ThemeBuild(NamedTuple):
-    """The two generated stylesheets (also written to ``out_dir``)."""
-
-    theme_css: str
-    tailwind_theme_css: str
-
-
 @dataclass(frozen=True)
 class _Color:
     name: str
     hex: str
     slug: str
-    group: str
+    role: str
+    note: str
 
 
 @dataclass(frozen=True)
 class _Model:
+    """Validated brand.json v2, ready for the theme builder and generators.
+
+    ``tracking`` and ``case`` are ``(display, body)`` tuples; ``scale`` is
+    ``(base, ratio)``. ``feedback`` is ``"auto"`` or a ``{role: hex}`` dict.
+    ``charts`` is ``"auto"`` or a tuple of hex strings. ``radius`` is a
+    normalized dict with ``xs/sm/md/lg/xl/full`` keys.
+    """
+
     name: str
     purpose: str
+    persona: str
+    territory: str
+    archetype: str
+    attributes: tuple[str, ...]
+    voice: dict[str, Any]
     colors: tuple[_Color, ...]
     lookup: dict[str, _Color]
-    pairs: tuple[tuple[_Color, _Color, str], ...]
-    gradient_from: _Color
-    gradient_to: _Color
+    feedback: Any
+    charts: Any
     display_stack: str
     body_stack: str
-    scale: tuple[tuple[str, int, float], ...]
+    display_weight: int
+    body_weight: int
+    tracking: tuple[str, str]
+    case: tuple[str, str]
+    scale: tuple[float, float]
+    radius: dict[str, float]
     unit: int
+    shadows: str
+    modes: tuple[str, ...]
+    default_mode: str
+    gradient: dict[str, Any] | None
+    icons: dict[str, Any]
+    imagery: dict[str, Any]
+    composition: dict[str, Any]
+    logo: dict[str, str]
 
 
 # ---------------------------------------------------------------------------
@@ -273,7 +310,7 @@ def _first_with_contrast(candidates: Iterable[str], background: str, minimum: fl
 
 
 # ---------------------------------------------------------------------------
-# Input parsing and validation
+# Primitive validators
 # ---------------------------------------------------------------------------
 
 
@@ -281,6 +318,12 @@ def _text(value: Any, field: str) -> str:
     if not isinstance(value, str) or not value.strip():
         raise BrandError(f"brand.json: {field} must be a non-empty string")
     return value.strip()
+
+
+def _string_list(value: Any, field: str) -> list[str]:
+    if not isinstance(value, list):
+        raise BrandError(f"brand.json: {field} must be a list of strings")
+    return [_text(item, f"{field}[{index}]") for index, item in enumerate(value)]
 
 
 def _number(value: Any, field: str, minimum: float, maximum: float) -> float:
@@ -291,11 +334,19 @@ def _number(value: Any, field: str, minimum: float, maximum: float) -> float:
     return float(value)
 
 
+def _integer(value: Any, field: str, minimum: int, maximum: int) -> int:
+    if isinstance(value, bool) or not isinstance(value, int):
+        raise BrandError(f"brand.json: {field} must be an integer")
+    if not minimum <= value <= maximum:
+        raise BrandError(f"brand.json: {field} must be between {minimum} and {maximum}")
+    return value
+
+
 def _hex(value: Any, field: str) -> str:
     if not isinstance(value, str) or not _HEX_RE.match(value):
         raise BrandError(
-            f"brand.json: {field} must be a 6-digit hex colour such as #A6402F "
-            f"(got {value!r})"
+            f"brand.json: {field} must be a 6-digit hex colour (#RRGGBB) "
+            f"such as #A6402F (got {value!r})"
         )
     return value.upper()
 
@@ -306,46 +357,105 @@ def _slug(name: str) -> str:
     return slug or "color"
 
 
-def _parse_colors(brand: dict[str, Any]) -> tuple[_Color, ...]:
-    block = brand.get("colors")
+def _object(value: Any, field: str) -> dict[str, Any]:
+    if not isinstance(value, dict):
+        raise BrandError(f"brand.json: {field} must be an object")
+    return value
+
+
+def _reject_unknown(block: dict[str, Any], field: str, allowed: Iterable[str]) -> None:
+    unknown = sorted(set(block) - set(allowed))
+    if unknown:
+        raise BrandError(
+            f"brand.json: {field} has unknown key(s) {', '.join(unknown)} "
+            f"(allowed: {', '.join(allowed)})"
+        )
+
+
+def _choice(value: Any, field: str, options: Iterable[str]) -> str:
+    options = tuple(options)
+    if value not in options:
+        raise BrandError(
+            f"brand.json: {field} must be one of {', '.join(options)} (got {value!r})"
+        )
+    return value
+
+
+# ---------------------------------------------------------------------------
+# Colour parsing
+# ---------------------------------------------------------------------------
+
+
+def _parse_color_role(value: Any, field: str, role: str) -> _Color:
+    spec = _object(value, field)
+    _reject_unknown(spec, field, ("name", "hex", "note"))
+    name = _text(spec.get("name"), f"{field}.name")
+    note = spec.get("note", "")
+    if note is None:
+        note = ""
+    if not isinstance(note, str):
+        raise BrandError(f"brand.json: {field}.note must be a string when present")
+    return _Color(
+        name=name,
+        hex=_hex(spec.get("hex"), f"{field}.hex"),
+        slug=_slug(name),
+        role=role,
+        note=note.strip(),
+    )
+
+
+def _parse_colors(design: dict[str, Any]) -> tuple[_Color, ...]:
+    block = design.get("colors")
     if not isinstance(block, dict):
-        raise BrandError("brand.json: colors must be an object with primary and secondary lists")
+        raise BrandError(
+            "brand.json: design.colors must be an object with canvas, surface, "
+            "ink and primary roles"
+        )
+    _reject_unknown(
+        block,
+        "design.colors",
+        REQUIRED_COLOR_ROLES + OPTIONAL_COLOR_ROLES,
+    )
 
     colors: list[_Color] = []
+    for role in REQUIRED_COLOR_ROLES:
+        if role not in block:
+            raise BrandError(
+                f"brand.json: design.colors.{role} is required "
+                f"(roles: {', '.join(REQUIRED_COLOR_ROLES + OPTIONAL_COLOR_ROLES)})"
+            )
+        colors.append(_parse_color_role(block[role], f"design.colors.{role}", role))
+
+    if block.get("accent") is not None:
+        colors.append(_parse_color_role(block["accent"], "design.colors.accent", "accent"))
+
+    support = block.get("support")
+    if support is not None:
+        if not isinstance(support, list):
+            raise BrandError("brand.json: design.colors.support must be a list of colours")
+        for index, item in enumerate(support):
+            colors.append(
+                _parse_color_role(item, f"design.colors.support[{index}]", "support")
+            )
+
     seen_names: dict[str, str] = {}
-    seen_slugs: dict[str, str] = {}
+    seen_slugs: dict[str, _Color] = {}
+    for color in colors:
+        name_key = color.name.casefold()
+        if name_key in seen_names:
+            raise BrandError(
+                f"brand.json: duplicate colour name {color.name!r} "
+                f"(already used by {seen_names[name_key]})"
+            )
+        if color.slug in seen_slugs:
+            other = seen_slugs[color.slug]
+            raise BrandError(
+                f"brand.json: colour names {other.name!r} and {color.name!r} "
+                f"produce the same CSS token {color.slug!r} (duplicate slug)"
+            )
+        seen_names[name_key] = color.role
+        seen_slugs[color.slug] = color
 
-    for group in ("primary", "secondary"):
-        items = block.get(group)
-        if not isinstance(items, list) or not items:
-            raise BrandError(f"brand.json: colors.{group} must be a non-empty list")
-        for index, item in enumerate(items):
-            field = f"colors.{group}[{index}]"
-            if not isinstance(item, dict):
-                raise BrandError(f"brand.json: {field} must be an object with name and hex")
-            name = _text(item.get("name"), f"{field}.name")
-            hex_value = _hex(item.get("hex"), f"{field}.hex")
-            key = name.casefold()
-            if key in seen_names:
-                raise BrandError(
-                    f"brand.json: duplicate colour name {name!r} "
-                    f"(already used by {seen_names[key]})"
-                )
-            slug = _slug(name)
-            if slug in seen_slugs:
-                raise BrandError(
-                    f"brand.json: colour names {seen_slugs[slug]!r} and {name!r} "
-                    "produce the same CSS token"
-                )
-            note = item.get("note")
-            if note is not None and not isinstance(note, str):
-                raise BrandError(f"brand.json: {field}.note must be a string when present")
-            seen_names[key] = field
-            seen_slugs[slug] = name
-            colors.append(_Color(name=name, hex=hex_value, slug=slug, group=group))
-
-    if not any(color.group == "primary" for color in colors):
-        raise BrandError("brand.json: colors.primary needs at least one colour")
     return tuple(colors)
 
 
@@ -369,396 +479,428 @@ def _lookup_color(index: dict[str, _Color], reference: Any, field: str) -> _Colo
     return color
 
 
-def _parse_pairs(
-    brand: dict[str, Any], index: dict[str, _Color]
-) -> tuple[tuple[_Color, _Color, str], ...]:
-    pairs = brand.get("allowed_pairs")
-    if not isinstance(pairs, list) or not pairs:
-        raise BrandError("brand.json: allowed_pairs must be a non-empty list")
-
-    result: list[tuple[_Color, _Color, str]] = []
-    for position, pair in enumerate(pairs):
-        field = f"allowed_pairs[{position}]"
-        if not isinstance(pair, dict):
-            raise BrandError(f"brand.json: {field} must be an object with bg and fg")
-        background = _lookup_color(index, pair.get("bg"), f"{field}.bg")
-        foreground = _lookup_color(index, pair.get("fg"), f"{field}.fg")
-        use = pair.get("use", "")
-        if use is not None and not isinstance(use, str):
-            raise BrandError(f"brand.json: {field}.use must be a string when present")
-        result.append((background, foreground, (use or "").strip()))
-    return tuple(result)
+# ---------------------------------------------------------------------------
+# Design blocks
+# ---------------------------------------------------------------------------
 
 
-def _parse_gradient(
-    brand: dict[str, Any], index: dict[str, _Color]
-) -> tuple[_Color, _Color]:
-    gradient = brand.get("gradient")
-    if not isinstance(gradient, dict):
-        raise BrandError("brand.json: gradient must be an object with from, to and angle")
-
-    start = _lookup_color(index, gradient.get("from"), "gradient.from")
-    end = _lookup_color(index, gradient.get("to"), "gradient.to")
-
-    angle = gradient.get("angle")
-    if isinstance(angle, bool) or not isinstance(angle, (int, float)):
-        raise BrandError("brand.json: gradient.angle must be 45")
-    if float(angle) != float(GRADIENT_ANGLE):
+def _parse_feedback(value: Any) -> Any:
+    if value == "auto":
+        return "auto"
+    if not isinstance(value, dict):
         raise BrandError(
-            "brand.json: gradient.angle must be 45 "
-            "(V1 allows only the two-stop 50/50 gradient at 45 degrees)"
+            'brand.json: design.feedback must be "auto" or an object with '
+            f"{', '.join(FEEDBACK_ROLES)} overrides"
         )
-    if start.hex == end.hex:
-        raise BrandError("brand.json: gradient.from and gradient.to must be different colours")
-    return start, end
+    _reject_unknown(value, "design.feedback", FEEDBACK_ROLES)
+
+    overrides: dict[str, str] = {}
+    for role, spec in value.items():
+        field = f"design.feedback.{role}"
+        if isinstance(spec, str):
+            overrides[role] = _hex(spec, field)
+        elif isinstance(spec, dict):
+            overrides[role] = _parse_color_role(spec, field, role).hex
+        else:
+            raise BrandError(
+                f"brand.json: {field} must be a hex colour or an object with name and hex"
+            )
+    return overrides
 
 
-def _parse_fonts(brand: dict[str, Any]) -> tuple[str, str]:
-    fonts = brand.get("fonts")
-    if not isinstance(fonts, dict):
-        raise BrandError("brand.json: fonts must be an object with display and body")
+def _parse_charts(value: Any) -> Any:
+    if value == "auto":
+        return "auto"
+    if not isinstance(value, list) or not value:
+        raise BrandError(
+            'brand.json: design.charts must be "auto" or a non-empty list of colours'
+        )
+
+    charts: list[str] = []
+    for index, item in enumerate(value):
+        field = f"design.charts[{index}]"
+        if isinstance(item, str):
+            charts.append(_hex(item, field))
+        elif isinstance(item, dict):
+            charts.append(_parse_color_role(item, field, "chart").hex)
+        else:
+            raise BrandError(
+                f"brand.json: {field} must be a hex colour or an object with name and hex"
+            )
+    return tuple(charts)
+
+
+def _parse_type(
+    design: dict[str, Any],
+) -> tuple[
+    str,
+    str,
+    int,
+    int,
+    tuple[str, str],
+    tuple[str, str],
+    tuple[float, float],
+]:
+    block = _object(design.get("type", {}), "design.type")
+    _reject_unknown(block, "design.type", ("display", "body", "scale"))
 
     stacks: list[str] = []
-    for role, default_fallback in (("display", "serif"), ("body", "sans-serif")):
-        field = f"fonts.{role}"
-        spec = fonts.get(role)
-        if not isinstance(spec, dict):
-            raise BrandError(
-                f"brand.json: {field} must be an object with family and optional fallback"
-            )
-        family = _text(spec.get("family"), f"{field}.family").strip('"').strip("'")
+    weights: list[int] = []
+    trackings: list[str] = []
+    cases: list[str] = []
+
+    for role, default_fallback, default_weight in (
+        ("display", "sans-serif", 600),
+        ("body", "sans-serif", 400),
+    ):
+        field = f"design.type.{role}"
+        spec = _object(block.get(role, {}), field)
+        _reject_unknown(spec, field, ("family", "fallback", "weight", "tracking", "case"))
+
+        family = _text(spec.get("family", DEFAULT_TYPE_FAMILY), f"{field}.family")
+        family = family.strip('"').strip("'")
         if "," in family or '"' in family:
             raise BrandError(f"brand.json: {field}.family must be a single font family name")
+
         fallback = _text(spec.get("fallback", default_fallback), f"{field}.fallback")
+        weight = _integer(spec.get("weight", default_weight), f"{field}.weight", 100, 900)
+        if weight % 100:
+            raise BrandError(f"brand.json: {field}.weight must be a multiple of 100")
+
+        tracking = spec.get("tracking", "normal")
+        if not isinstance(tracking, str) or not tracking.strip():
+            raise BrandError(f"brand.json: {field}.tracking must be a non-empty string")
+
+        case = _choice(spec.get("case", "none"), f"{field}.case", TEXT_CASES)
+
         stacks.append(f'"{family}", {fallback}')
-    return stacks[0], stacks[1]
+        weights.append(weight)
+        trackings.append(tracking.strip())
+        cases.append(case)
+
+    scale_block = block.get("scale", {})
+    scale_block = _object(scale_block, "design.type.scale")
+    _reject_unknown(scale_block, "design.type.scale", ("base", "ratio"))
+    base = _number(scale_block.get("base", DEFAULT_SCALE[0]), "design.type.scale.base", 12, 32)
+    ratio = _number(scale_block.get("ratio", DEFAULT_SCALE[1]), "design.type.scale.ratio", 1.05, 1.8)
+
+    return (
+        stacks[0],
+        stacks[1],
+        weights[0],
+        weights[1],
+        (trackings[0], trackings[1]),
+        (cases[0], cases[1]),
+        (base, ratio),
+    )
 
 
-def _type_scale(brand: dict[str, Any]) -> tuple[tuple[str, int, float], ...]:
-    scale = brand.get("scale")
-    if not isinstance(scale, dict):
-        raise BrandError("brand.json: scale must be an object with base and ratio")
-    base = _number(scale.get("base"), "scale.base", 12, 32)
-    ratio = _number(scale.get("ratio"), "scale.ratio", 1.05, 1.8)
+def _parse_radius(value: Any) -> dict[str, float]:
+    if isinstance(value, str):
+        profile = _choice(
+            value,
+            "design.shape.radius",
+            tuple(RADIUS_PROFILES),
+        )
+        return dict(RADIUS_PROFILES[profile])
+    if isinstance(value, dict):
+        _reject_unknown(value, "design.shape.radius", RADIUS_KEYS)
+        radius = dict(RADIUS_PROFILES[DEFAULT_RADIUS])
+        for key, raw in value.items():
+            radius[key] = float(
+                _integer(raw, f"design.shape.radius.{key}", 0, 9999)
+            )
+        return radius
+    raise BrandError(
+        "brand.json: design.shape.radius must be a profile "
+        f"({', '.join(RADIUS_PROFILES)}) or an object with "
+        f"{', '.join(RADIUS_KEYS)}"
+    )
 
-    steps: list[tuple[str, int, float]] = []
-    for name, exponent in TYPE_STEPS:
-        size = int(round(base * (ratio**exponent)))
-        if exponent <= 0:
-            leading = 1.6
-        else:
-            leading = max(1.05, 1.6 - 0.07 * exponent)
-        steps.append((name, size, round(leading, 2)))
-    return tuple(steps)
+
+def _parse_shape(design: dict[str, Any]) -> tuple[dict[str, float], int, str]:
+    block = design.get("shape", {})
+    block = _object(block, "design.shape")
+    _reject_unknown(block, "design.shape", ("radius", "unit", "shadows"))
+
+    radius = _parse_radius(block.get("radius", DEFAULT_RADIUS))
+
+    unit = block.get("unit", DEFAULT_UNIT)
+    if isinstance(unit, bool) or unit not in (4, 8):
+        raise BrandError(
+            f"brand.json: design.shape.unit must be 4 or 8 (got {unit!r})"
+        )
+
+    shadows = _choice(block.get("shadows", DEFAULT_SHADOWS), "design.shape.shadows", SHADOWS)
+    return radius, int(unit), shadows
+
+
+def _gradient_reference(reference: Any, field: str, index: dict[str, _Color]) -> str:
+    if isinstance(reference, str) and reference.startswith("#"):
+        return _hex(reference, field)
+    return _lookup_color(index, reference, field).hex
+
+
+def _parse_gradient(value: Any, index: dict[str, _Color]) -> dict[str, Any] | None:
+    if value is None:
+        return None
+    if not isinstance(value, dict):
+        raise BrandError(
+            "brand.json: design.theme.gradient must be null or an object "
+            "with from, to and angle"
+        )
+    _reject_unknown(value, "design.theme.gradient", ("from", "to", "angle", "via"))
+
+    start = _gradient_reference(value.get("from"), "design.theme.gradient.from", index)
+    end = _gradient_reference(value.get("to"), "design.theme.gradient.to", index)
+    if start == end:
+        raise BrandError(
+            "brand.json: design.theme.gradient.from and .to must be different colours"
+        )
+
+    angle = _number(value.get("angle", 45), "design.theme.gradient.angle", 0, 360)
+
+    via = value.get("via")
+    via_hex = None
+    if via is not None:
+        via_hex = _gradient_reference(via, "design.theme.gradient.via", index)
+
+    return {"from": start, "to": end, "angle": angle, "via": via_hex}
+
+
+def _parse_theme(
+    design: dict[str, Any], index: dict[str, _Color]
+) -> tuple[tuple[str, ...], str, dict[str, Any] | None]:
+    block = design.get("theme", {})
+    block = _object(block, "design.theme")
+    _reject_unknown(block, "design.theme", ("modes", "default", "gradient"))
+
+    modes_raw = block.get("modes", list(DEFAULT_MODES))
+    if not isinstance(modes_raw, list) or not modes_raw:
+        raise BrandError(
+            "brand.json: design.theme.modes must be a non-empty list containing "
+            f"{' and/or '.join(THEME_MODES)}"
+        )
+
+    modes: list[str] = []
+    for position, mode in enumerate(modes_raw):
+        mode = _choice(mode, f"design.theme.modes[{position}]", THEME_MODES)
+        if mode in modes:
+            raise BrandError(f"brand.json: design.theme.modes repeats {mode!r}")
+        modes.append(mode)
+
+    default = block.get("default", "light" if "light" in modes else modes[0])
+    if default not in modes:
+        raise BrandError(
+            f"brand.json: design.theme.default must be one of the enabled modes "
+            f"({', '.join(modes)}), got {default!r}"
+        )
+
+    gradient = _parse_gradient(block.get("gradient"), index)
+    return tuple(modes), default, gradient
+
+
+def _parse_icons(design: dict[str, Any]) -> dict[str, Any]:
+    block = design.get("icons", {})
+    block = _object(block, "design.icons")
+    _reject_unknown(block, "design.icons", ("family", "style", "size"))
+
+    family = _choice(block.get("family", "fluent"), "design.icons.family", ICON_FAMILIES)
+    style = _text(block.get("style", "regular"), "design.icons.style")
+    size = _integer(block.get("size", 16), "design.icons.size", 8, 64)
+    return {"family": family, "style": style, "size": size}
+
+
+def _parse_imagery(design: dict[str, Any]) -> dict[str, Any]:
+    block = design.get("imagery", {})
+    block = _object(block, "design.imagery")
+    _reject_unknown(block, "design.imagery", ("mode", "treatment", "placeholder"))
+
+    mode = _choice(block.get("mode", "abstract"), "design.imagery.mode", IMAGERY_MODES)
+
+    treatment = block.get("treatment", "")
+    if treatment is None:
+        treatment = ""
+    if not isinstance(treatment, str):
+        raise BrandError("brand.json: design.imagery.treatment must be a string")
+
+    placeholder = _text(
+        block.get("placeholder", DEFAULT_IMAGERY["placeholder"]),
+        "design.imagery.placeholder",
+    )
+    return {"mode": mode, "treatment": treatment.strip(), "placeholder": placeholder}
+
+
+def _parse_composition(design: dict[str, Any]) -> dict[str, Any]:
+    block = design.get("composition", {})
+    block = _object(block, "design.composition")
+    _reject_unknown(block, "design.composition", ("direction", "measure", "grid"))
+
+    direction = _choice(
+        block.get("direction", "structured"),
+        "design.composition.direction",
+        COMPOSITION_DIRECTIONS,
+    )
+    measure = _text(block.get("measure", "65ch"), "design.composition.measure")
+
+    grid_raw = block.get("grid", "12")
+    if isinstance(grid_raw, int) and not isinstance(grid_raw, bool):
+        grid = str(grid_raw)
+    elif isinstance(grid_raw, str):
+        grid = _text(grid_raw, "design.composition.grid")
+    else:
+        raise BrandError(
+            "brand.json: design.composition.grid must be a string such as \"12\""
+        )
+
+    return {"direction": direction, "measure": measure, "grid": grid}
+
+
+def _parse_logo(design: dict[str, Any]) -> dict[str, str]:
+    block = design.get("logo", {})
+    block = _object(block, "design.logo")
+    _reject_unknown(block, "design.logo", ("variant", "name", "notes"))
+
+    variant = _choice(block.get("variant", "C"), "design.logo.variant", LOGO_VARIANTS)
+
+    name = block.get("name", "")
+    notes = block.get("notes", "")
+    if name is None:
+        name = ""
+    if notes is None:
+        notes = ""
+    if not isinstance(name, str):
+        raise BrandError("brand.json: design.logo.name must be a string when present")
+    if not isinstance(notes, str):
+        raise BrandError("brand.json: design.logo.notes must be a string when present")
+
+    return {"variant": variant, "name": name.strip(), "notes": notes.strip()}
+
+
+def _parse_voice(brand: dict[str, Any]) -> dict[str, Any]:
+    value = brand.get("voice")
+    if value is None:
+        return {
+            "summary": DEFAULT_VOICE_SUMMARY,
+            "principles": [],
+            "avoid": [],
+            "person": "você",
+            "emoji": "none",
+        }
+    if not isinstance(value, dict):
+        raise BrandError("brand.json: voice must be an object when present")
+    _reject_unknown(value, "voice", ("summary", "principles", "avoid", "person", "emoji"))
+
+    return {
+        "summary": _text(value.get("summary"), "voice.summary"),
+        "principles": _string_list(value.get("principles", []), "voice.principles"),
+        "avoid": _string_list(value.get("avoid", []), "voice.avoid"),
+        "person": _text(value.get("person", "você"), "voice.person"),
+        "emoji": _choice(value.get("emoji", "none"), "voice.emoji", VOICE_EMOJI),
+    }
+
+
+# ---------------------------------------------------------------------------
+# Model
+# ---------------------------------------------------------------------------
 
 
 def _build_model(brand: Any) -> _Model:
     if not isinstance(brand, dict):
         raise BrandError("brand.json: top level must be a JSON object")
 
-    version = brand.get("version", 1)
-    if isinstance(version, bool) or version != 1:
-        raise BrandError("brand.json: version must be 1")
+    version = brand.get("version")
+    if isinstance(version, bool) or version != 2:
+        raise BrandError(
+            "brand.json: version must be 2 (the v2 schema is the final contract; "
+            "v1 brand.json is not supported)"
+        )
+
+    v1_keys = [key for key in V1_TOP_LEVEL_KEYS if key in brand]
+    if v1_keys:
+        raise BrandError(
+            f"brand.json: {', '.join(v1_keys)} belong to schema v1 and are not "
+            "accepted in v2 (colors/type/shape/theme live under design)"
+        )
 
     name = "Brand"
     if brand.get("name") is not None:
         name = _text(brand.get("name"), "name")
+
     purpose = _text(brand.get("purpose"), "purpose")
-    for key in ("persona", "territory", "archetype"):
-        _text(brand.get(key), key)
+    persona = _text(brand.get("persona"), "persona")
+    territory = _text(brand.get("territory"), "territory")
+    archetype = _text(brand.get("archetype"), "archetype")
 
-    attributes = brand.get("attributes")
-    if not isinstance(attributes, list) or not attributes:
+    attributes = _string_list(brand.get("attributes"), "attributes")
+    if not attributes:
         raise BrandError("brand.json: attributes must be a non-empty list of strings")
-    for position, attribute in enumerate(attributes):
-        _text(attribute, f"attributes[{position}]")
 
-    colors = _parse_colors(brand)
+    voice = _parse_voice(brand)
+
+    design = _object(brand.get("design"), "design")
+    _reject_unknown(design, "design", DESIGN_KEYS)
+    colors = _parse_colors(design)
     index = _color_index(colors)
-    pairs = _parse_pairs(brand, index)
-    gradient_from, gradient_to = _parse_gradient(brand, index)
-    display_stack, body_stack = _parse_fonts(brand)
-    scale = _type_scale(brand)
 
-    unit = brand.get("unit")
-    if isinstance(unit, bool) or not isinstance(unit, (int, float)) or float(unit) != UNIT_PX:
-        raise BrandError("brand.json: unit must be 8 (the 8px grid is fixed in V1)")
+    feedback = _parse_feedback(design.get("feedback", "auto"))
+    charts = _parse_charts(design.get("charts", "auto"))
 
-    logo = brand.get("logo")
-    if not isinstance(logo, dict):
-        raise BrandError("brand.json: logo must be an object with a variant")
-    if logo.get("variant") not in ("C", "B", "A"):
-        raise BrandError("brand.json: logo.variant must be C, B or A")
-    if logo.get("name") is not None:
-        _text(logo.get("name"), "logo.name")
-    if logo.get("notes") is not None and not isinstance(logo.get("notes"), str):
-        raise BrandError("brand.json: logo.notes must be a string when present")
+    (
+        display_stack,
+        body_stack,
+        display_weight,
+        body_weight,
+        tracking,
+        case,
+        scale,
+    ) = _parse_type(design)
 
-    if not isinstance(brand.get("aceite"), bool):
+    radius, unit, shadows = _parse_shape(design)
+    modes, default_mode, gradient = _parse_theme(design, index)
+    icons = _parse_icons(design)
+    imagery = _parse_imagery(design)
+    composition = _parse_composition(design)
+    logo = _parse_logo(design)
+
+    aceite = brand.get("aceite")
+    if not isinstance(aceite, bool):
         raise BrandError("brand.json: aceite must be true or false (manual approval flag)")
 
     return _Model(
         name=name,
         purpose=purpose,
+        persona=persona,
+        territory=territory,
+        archetype=archetype,
+        attributes=tuple(attributes),
+        voice=voice,
         colors=colors,
         lookup=index,
-        pairs=pairs,
-        gradient_from=gradient_from,
-        gradient_to=gradient_to,
+        feedback=feedback,
+        charts=charts,
         display_stack=display_stack,
         body_stack=body_stack,
+        display_weight=display_weight,
+        body_weight=body_weight,
+        tracking=tracking,
+        case=case,
         scale=scale,
-        unit=UNIT_PX,
+        radius=radius,
+        unit=unit,
+        shadows=shadows,
+        modes=modes,
+        default_mode=default_mode,
+        gradient=gradient,
+        icons=icons,
+        imagery=imagery,
+        composition=composition,
+        logo=logo,
     )
 
 
 # ---------------------------------------------------------------------------
-# Semantic tokens
-# ---------------------------------------------------------------------------
-
-
-def _semantic_tokens(model: _Model, mode: str) -> dict[str, str]:
-    if mode not in ("light", "dark"):
-        raise ValueError(f"unknown theme mode: {mode}")
-
-    primary_source = next(color.hex for color in model.colors if color.group == "primary")
-    secondary_sources = [color.hex for color in model.colors if color.group == "secondary"]
-
-    if mode == "light":
-        canvas = mix("#FFFFFF", primary_source, 0.04)
-        surface = "#FFFFFF"
-        surface_muted = mix("#FFFFFF", primary_source, 0.08)
-        surface_raised = "#FFFFFF"
-        band = mix("#141110", primary_source, 0.32)
-        fg = ensure_contrast(mix("#171310", primary_source, 0.10), canvas, 7.0)
-        primary = ensure_contrast(primary_source, canvas, 3.0)
-        primary_hover = mix(primary, "#000000", 0.12)
-        primary_soft = mix(canvas, primary_source, 0.14)
-    else:
-        canvas = mix("#121110", primary_source, 0.06)
-        surface = mix("#1A1816", primary_source, 0.06)
-        surface_muted = mix("#221F1C", primary_source, 0.08)
-        surface_raised = mix("#27231F", primary_source, 0.08)
-        band = mix("#0C0B0A", primary_source, 0.30)
-        fg = ensure_contrast(mix("#F7F3ED", primary_source, 0.08), canvas, 7.0)
-        primary = ensure_contrast(primary_source, canvas, 3.0)
-        primary_hover = mix(primary, "#FFFFFF", 0.12)
-        primary_soft = mix(canvas, primary_source, 0.24)
-
-    accent_source = max(secondary_sources, key=lambda value: contrast_ratio(value, surface))
-    if mode == "light":
-        highlight = mix("#FFFFFF", accent_source, 0.22)
-        on_highlight = ensure_contrast("#141110", highlight, 4.5)
-    else:
-        highlight = mix("#121110", accent_source, 0.38)
-        on_highlight = ensure_contrast("#FFFFFF", highlight, 4.5)
-
-    accent = _ensure_contrast_all(accent_source, (surface, canvas), 4.5)
-    link = _ensure_contrast_all(primary_source, (surface, canvas), 4.5)
-    focus = _ensure_contrast_all(accent_source, (surface, canvas), 3.0)
-    on_primary = _on_color(primary)
-    # The hover fill must keep the same on-primary readable (no contrast dip).
-    primary_hover = ensure_background_contrast(on_primary, primary_hover, 4.5)
-    on_primary_soft = ensure_contrast(primary_source, primary_soft, 4.5)
-    on_band = ensure_contrast("#FFFFFF", band, 4.5)
-    on_band_muted = ensure_contrast(mix(on_band, band, 0.25), band, 4.5)
-    band_accent = _first_with_contrast((accent, highlight, "#FFFFFF"), band, 4.5)
-
-    tokens = {
-        "canvas": canvas,
-        "surface": surface,
-        "surface-muted": surface_muted,
-        "surface-raised": surface_raised,
-        "band": band,
-        "on-band": on_band,
-        "on-band-muted": on_band_muted,
-        "band-accent": band_accent,
-        "fg": fg,
-        "fg-muted": ensure_contrast(mix(fg, canvas, 0.30), canvas, 4.5),
-        "fg-subtle": ensure_contrast(mix(fg, canvas, 0.42), canvas, 4.5),
-        "fg-disabled": mix(fg, canvas, 0.62),
-        "line": mix(canvas, fg, 0.12),
-        "line-strong": mix(canvas, fg, 0.24),
-        "line-input": _ensure_contrast_all(mix(canvas, fg, 0.45), (surface, canvas), 3.0),
-        "primary": primary,
-        "primary-hover": primary_hover,
-        "on-primary": on_primary,
-        "primary-soft": primary_soft,
-        "on-primary-soft": on_primary_soft,
-        "accent": accent,
-        "link": link,
-        "focus": focus,
-        "highlight": highlight,
-        "on-highlight": on_highlight,
-    }
-    if set(tokens) != set(SEMANTIC_COLOR_KEYS):
-        raise RuntimeError("semantic token set drifted from SEMANTIC_COLOR_KEYS")
-    return tokens
-
-
-# ---------------------------------------------------------------------------
-# CSS rendering
-# ---------------------------------------------------------------------------
-
-
-def _comment(text: Any) -> str:
-    return " ".join(str(text).split()).replace("*/", "* /")
-
-
-def _declarations(tokens: dict[str, str]) -> list[str]:
-    lines: list[str] = []
-    for key, value in tokens.items():
-        if key == "line":
-            lines.append(
-                "  /* line and line-strong are decorative separators. "
-                "Use --b-line-input (>=3:1) for control boundaries (WCAG 1.4.11). */"
-            )
-        if key == "primary":
-            lines.append(
-                "  /* primary is UI and large text only (>=3:1 vs canvas). "
-                "For body text use --b-link or --b-fg. */"
-            )
-        lines.append(f"  --b-{key}: {value};")
-    return lines
-
-
-def _theme_css(model: _Model, light: dict[str, str], dark: dict[str, str]) -> str:
-    header = "\n".join(
-        (
-            "/* Brand Engine · theme.css — generated by scripts/build_theme.py from brand.json.",
-            "   Do not edit by hand; change brand.json and regenerate.",
-            f"   Brand: {_comment(model.name)}",
-            f"   Purpose: {_comment(model.purpose)}",
-            "   --b-color-* keeps the approved hex; semantic tokens may shift for contrast.",
-            "   Gradient rule: exactly two stops at 50/50, 45deg. */",
-        )
-    )
-
-    root: list[str] = [":root {", "  color-scheme: light;", "", "  /* Brand palette — approved hex, theme invariant */"]
-    root.extend(
-        f"  --b-color-{color.slug}: {color.hex}; /* {_comment(color.name)} · {color.group} */"
-        for color in model.colors
-    )
-    root.extend(("", "  /* Type — display for headlines, body for reading. */"))
-    root.append("  /* Scale: size = base * ratio^n; leading = 1.6 - 0.07n (floor 1.05). */")
-    root.append(f"  --b-display: {model.display_stack};")
-    root.append(f"  --b-body: {model.body_stack};")
-    for name, size, leading in model.scale:
-        root.append(f"  --b-text-{name}: {size}px;")
-        root.append(f"  --b-leading-{name}: {leading:g};")
-
-    root.extend(("", f"  /* Spacing — multiples of the {model.unit}px unit */"))
-    root.append(f"  --b-unit: {model.unit}px;")
-    for step in range(0, 17):
-        root.append(f"  --b-space-{step}: {step * model.unit}px;")
-
-    root.extend(("", "  /* Radius — derived from the unit */"))
-    root.append(f"  --b-radius-sm: {model.unit // 2}px;")
-    root.append(f"  --b-radius-md: {model.unit}px;")
-    root.append(f"  --b-radius-lg: {model.unit * 2}px;")
-    root.append(f"  --b-radius-xl: {model.unit * 3}px;")
-    root.append("  --b-radius-full: 9999px;")
-
-    root.extend(
-        (
-            "",
-            "  /* Brand expression — the only allowed gradient */",
-            f"  --b-gradient: linear-gradient({GRADIENT_ANGLE}deg, "
-            f"{model.gradient_from.hex} 50%, {model.gradient_to.hex} 50%);",
-            "",
-            "  /* Semantic tokens — light */",
-        )
-    )
-    root.extend(_declarations(light))
-    root.append("}")
-
-    pair_lines = ["", "/* Allowed color pairs from brand.json (WCAG contrast checked at build time)."]
-    for background, foreground, use in model.pairs:
-        ratio = contrast_ratio(foreground.hex, background.hex)
-        verdict = "AA" if ratio >= 4.5 else ("AA-large" if ratio >= 3.0 else "FAIL-AA")
-        suffix = f" · {_comment(use)}" if use else ""
-        pair_lines.append(
-            f" * {_comment(foreground.name)} on {_comment(background.name)} — "
-            f"{ratio:.2f}:1 ({verdict}){suffix}"
-        )
-    pair_lines.append(" */")
-
-    dark_lines = ["", '[data-theme="dark"] {', "  color-scheme: dark;", "", "  /* Semantic tokens — dark */"]
-    dark_lines.extend(_declarations(dark))
-    dark_lines.append("}")
-
-    tokens_block = "\n".join(root + pair_lines + dark_lines)
-
-    template = TEMPLATE_FILE.read_text(encoding="utf-8")
-    if "{{BRAND_HEADER}}" not in template or "{{BRAND_TOKENS}}" not in template:
-        raise BrandError(f"theme template is missing placeholders: {TEMPLATE_FILE}")
-    return template.replace("{{BRAND_HEADER}}", header).replace("{{BRAND_TOKENS}}", tokens_block)
-
-
-def _tailwind_css(model: _Model) -> str:
-    lines = [
-        "/* Brand Engine · tailwind-theme.css — generated by scripts/build_theme.py.",
-        "   Load inside <style type=\"text/tailwindcss\">. Colors point at --b-* tokens,",
-        "   so bg-surface and text-fg-muted switch with the theme automatically.",
-        "   Semantic utilities only: bg-surface, text-fg-muted, border-line, bg-primary,",
-        "   text-on-primary, text-accent, bg-highlight, bg-grad-brand.",
-        "   primary is UI and large text only (>=3:1 vs canvas); use text-link or text-fg for body text.",
-        "   line and line-strong are decorative separators; use line-input for control boundaries (WCAG 1.4.11).",
-        "   Never use palette utilities such as bg-blue-600 or a bare hex in content. */",
-        "",
-        "@custom-variant dark (&:where([data-theme=dark], [data-theme=dark] *));",
-        "",
-        "@theme inline {",
-        "  --font-sans: var(--b-body);",
-        "  --font-display: var(--b-display);",
-        "",
-        "  /* Semantic colors */",
-    ]
-    lines.extend(f"  --color-{key}: var(--b-{key});" for key in SEMANTIC_COLOR_KEYS)
-    lines.extend(
-        (
-            "}",
-            "",
-            "@theme {",
-            f"  --spacing: {model.unit}px;",
-            "",
-            "  /* Type scale — sizes and coupled line-heights from brand.json */",
-        )
-    )
-    for name, size, leading in model.scale:
-        lines.append(f"  --text-{name}: {size}px;")
-        lines.append(f"  --text-{name}--line-height: {leading:g};")
-    lines.extend(("", "  /* Radius */"))
-    lines.append(f"  --radius-sm: {model.unit // 2}px;")
-    lines.append(f"  --radius-md: {model.unit}px;")
-    lines.append(f"  --radius-lg: {model.unit * 2}px;")
-    lines.append(f"  --radius-xl: {model.unit * 3}px;")
-    lines.append("  --radius-full: 9999px;")
-    lines.extend(
-        (
-            "}",
-            "",
-            "/* The only allowed gradient: two stops, 50/50, 45deg. */",
-            "@utility bg-grad-brand { background-image: var(--b-gradient); }",
-        )
-    )
-    return "\n".join(lines) + "\n"
-
-
-def render_theme(brand: dict[str, Any]) -> ThemeBuild:
-    """Render both stylesheets from an already parsed brand object."""
-
-    model = _build_model(brand)
-    light = _semantic_tokens(model, "light")
-    dark = _semantic_tokens(model, "dark")
-    return ThemeBuild(
-        theme_css=_theme_css(model, light, dark),
-        tailwind_theme_css=_tailwind_css(model),
-    )
-
-
-# ---------------------------------------------------------------------------
-# Public API and CLI
+# Public API
 # ---------------------------------------------------------------------------
 
 
@@ -816,59 +958,8 @@ def missing_brand_behavior() -> str:
     return "ask-for-path-or-discovery"
 
 
-def build_theme(
-    brand_path: str | Path, out_dir: str | Path, force: bool = False
-) -> ThemeBuild:
-    """Build and write ``theme.css`` and ``tailwind-theme.css`` into ``out_dir``."""
-
-    data = _read_brand(brand_path)
-    result = render_theme(data)
-
-    out = Path(out_dir)
-    if out.exists() and not out.is_dir():
-        raise BrandError(f"{out}: --out must be a directory")
-    out.mkdir(parents=True, exist_ok=True)
-
-    targets = (out / THEME_FILE, out / TAILWIND_FILE)
-    if not force:
-        existing = [str(target) for target in targets if target.exists()]
-        if existing:
-            raise FileExistsError(
-                f"refusing to overwrite {', '.join(existing)} without --force"
-            )
-
-    targets[0].write_text(result.theme_css, encoding="utf-8")
-    targets[1].write_text(result.tailwind_theme_css, encoding="utf-8")
-    return result
-
-
-def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(
-        description="Build theme.css and tailwind-theme.css from brand.json."
-    )
-    parser.add_argument("--brand", help="path to brand.json (flag wins over discovery)")
-    parser.add_argument("--out", default=".", help="output directory (default: .)")
-    parser.add_argument("--force", action="store_true", help="replace existing output files")
-    args = parser.parse_args(argv)
-
-    try:
-        brand_path = resolve_brand_path(args.brand)
-        if brand_path is None:
-            print(
-                "No brand.json found. Pass --brand <path>, create ./brand.json, "
-                "or run discovery first (see SKILL.md, Phase 0).",
-                file=sys.stderr,
-            )
-            return 2
-        build_theme(brand_path, args.out, force=args.force)
-    except (BrandError, FileExistsError, OSError) as exc:
-        print(f"build_theme: {exc}", file=sys.stderr)
-        return 2
-
-    out = Path(args.out)
-    print(f"wrote {out / THEME_FILE} and {out / TAILWIND_FILE}")
-    return 0
-
-
 if __name__ == "__main__":
-    raise SystemExit(main())
+    raise SystemExit(
+        "build_theme: the theme builder lands in a later task; "
+        "this module currently exposes the v2 brand model only."
+    )
