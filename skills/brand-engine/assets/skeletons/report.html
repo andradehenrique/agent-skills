@@ -1,0 +1,129 @@
+<body class="min-h-svh bg-canvas font-sans text-fg antialiased" data-format="report">
+  <a href="#conteudo" class="be-skip">Pular para o conteúdo</a>
+
+  <header class="border-b border-line bg-canvas">
+    <div class="mx-auto flex max-w-4xl items-center justify-between gap-3 px-3 py-3 sm:px-4">
+      <!-- logo: breathing area / área de respiro = S (var(--b-space-1)) em todos os lados. -->
+      {{LOGO_HEADER}}
+      {{THEME_TOGGLE}}
+    </div>
+  </header>
+
+  <main id="conteudo" class="mx-auto max-w-4xl px-3 py-8 sm:px-4 md:py-10">
+
+    <!-- report:cover · assunto + conclusão, não só o título. -->
+    <section aria-labelledby="report-title" class="border-b border-line pb-6">
+      <p class="text-xs font-semibold uppercase tracking-widest text-accent">Relatório</p>
+      <h1 id="report-title" class="mt-2 text-3xl font-semibold tracking-tight md:text-5xl">{{TITLE}}</h1>
+      <p class="mt-3 max-w-2xl text-lg text-fg-muted">{{PURPOSE}}</p>
+      <p class="mt-3 text-sm text-fg-subtle">[placeholder — período · responsável · versão]</p>
+    </section>
+
+    <!-- report:summary · 3–4 números com base de comparação declarada. -->
+    <section aria-labelledby="resumo" class="py-6">
+      <h2 id="resumo" class="text-2xl font-semibold tracking-tight">Resumo executivo</h2>
+      <p class="mt-2 max-w-3xl text-fg-muted">[placeholder — três frases: o que mudou, por quê e o que fazer agora.]</p>
+      <dl class="mt-6 grid grid-cols-2 gap-x-4 gap-y-6 md:grid-cols-4">
+        <div class="border-t-2 border-primary pt-2">
+          <dt class="text-sm text-fg-muted">[placeholder — indicador]</dt>
+          <dd class="mt-1 text-3xl font-semibold tabular-nums">[00]</dd>
+          <p class="mt-1 text-xs text-fg-subtle">[placeholder — base e período]</p>
+        </div>
+        <div class="border-t-2 border-primary pt-2">
+          <dt class="text-sm text-fg-muted">[placeholder — indicador]</dt>
+          <dd class="mt-1 text-3xl font-semibold tabular-nums">[00%]</dd>
+          <p class="mt-1 text-xs text-fg-subtle">[placeholder — base e período]</p>
+        </div>
+        <div class="border-t-2 border-line-strong pt-2">
+          <dt class="text-sm text-fg-muted">[placeholder — indicador]</dt>
+          <dd class="mt-1 text-3xl font-semibold tabular-nums">[00]</dd>
+          <p class="mt-1 text-xs text-fg-subtle">[placeholder — base e período]</p>
+        </div>
+        <div class="border-t-2 border-line-strong pt-2">
+          <dt class="text-sm text-fg-muted">[placeholder — indicador]</dt>
+          <dd class="mt-1 text-3xl font-semibold tabular-nums">[00]</dd>
+          <p class="mt-1 text-xs text-fg-subtle">[placeholder — base e período]</p>
+        </div>
+      </dl>
+    </section>
+
+    <!-- report:data · caption descreve o recorte; th em toda coluna. -->
+    <section aria-labelledby="dados" class="border-t border-line py-6">
+      <h2 id="dados" class="text-2xl font-semibold tracking-tight">Dados</h2>
+      <p class="mt-2 max-w-2xl text-fg-muted">[placeholder — como os dados foram coletados e o que fica de fora.]</p>
+      <div class="be-scroll-x mt-4 rounded-lg border border-line bg-surface">
+        <table class="be-table min-w-[560px]">
+          <caption>Indicadores por período — [placeholder — recorte e fonte].</caption>
+          <thead>
+            <tr>
+              <th scope="col">Indicador</th>
+              <th scope="col">Período</th>
+              <th scope="col" class="text-right">Valor</th>
+              <th scope="col" class="text-right">Variação</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="font-medium">[placeholder — indicador A]</td>
+              <td>[placeholder — período]</td>
+              <td class="text-right tabular-nums">[00]</td>
+              <td class="text-right tabular-nums">[+00%]</td>
+            </tr>
+            <tr>
+              <td class="font-medium">[placeholder — indicador B]</td>
+              <td>[placeholder — período]</td>
+              <td class="text-right tabular-nums">[00]</td>
+              <td class="text-right tabular-nums">[-00%]</td>
+            </tr>
+            <tr>
+              <td class="font-medium">[placeholder — indicador C]</td>
+              <td>[placeholder — período]</td>
+              <td class="text-right tabular-nums">[00]</td>
+              <td class="text-right tabular-nums">[00%]</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- report:findings · uma ideia por bloco, com evidência. -->
+    <section aria-labelledby="achados" class="border-t border-line py-6">
+      <h2 id="achados" class="text-2xl font-semibold tracking-tight">Achados</h2>
+      <div class="mt-4 grid gap-4 md:grid-cols-3">
+        <article class="rounded-lg border border-line bg-surface p-4">
+          <h3 class="text-lg font-semibold">Achado 01</h3>
+          <p class="mt-2 text-sm text-fg-muted">[placeholder — o que os dados mostram, em uma frase.]</p>
+          <p class="mt-2 text-xs text-fg-subtle">Evidência: [placeholder — tabela ou seção].</p>
+        </article>
+        <article class="rounded-lg border border-line bg-surface p-4">
+          <h3 class="text-lg font-semibold">Achado 02</h3>
+          <p class="mt-2 text-sm text-fg-muted">[placeholder — o que os dados mostram, em uma frase.]</p>
+          <p class="mt-2 text-xs text-fg-subtle">Evidência: [placeholder — tabela ou seção].</p>
+        </article>
+        <article class="rounded-lg border border-line bg-surface p-4">
+          <h3 class="text-lg font-semibold">Achado 03</h3>
+          <p class="mt-2 text-sm text-fg-muted">[placeholder — o que os dados mostram, em uma frase.]</p>
+          <p class="mt-2 text-xs text-fg-subtle">Evidência: [placeholder — tabela ou seção].</p>
+        </article>
+      </div>
+    </section>
+
+    <!-- report:actions · recomendação com dono e prazo. -->
+    <section aria-labelledby="recomendacoes" class="border-t border-line py-6">
+      <h2 id="recomendacoes" class="text-2xl font-semibold tracking-tight">Recomendações</h2>
+      <ol class="mt-4 list-decimal space-y-2 pl-5 text-fg">
+        <li>[placeholder — ação 01 · dono · prazo]</li>
+        <li>[placeholder — ação 02 · dono · prazo]</li>
+        <li>[placeholder — ação 03 · dono · prazo]</li>
+      </ol>
+    </section>
+
+  </main>
+
+  <footer class="border-t border-line">
+    <div class="mx-auto flex max-w-4xl flex-wrap items-center justify-between gap-3 px-3 py-4 text-xs text-fg-subtle sm:px-4">
+      <span>{{BRAND_NAME}}</span>
+      <span>[placeholder — fonte dos dados · como foi gerado]</span>
+    </div>
+  </footer>
+</body>

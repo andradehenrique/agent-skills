@@ -1,0 +1,248 @@
+<body class="min-h-svh bg-canvas font-sans text-fg antialiased" data-format="manual">
+  <a href="#conteudo" class="be-skip">Pular para o conteúdo</a>
+
+  <!-- manual:cover · faixa de marca, um h1, sem números inventados. -->
+  <header class="bg-band text-on-band">
+    <div class="mx-auto max-w-4xl px-3 pb-8 pt-4 sm:px-4 md:pb-10">
+      <div class="flex items-center justify-between gap-3">
+        {{LOGO_HEADER}}
+        {{THEME_TOGGLE}}
+      </div>
+      <p class="mt-8 text-xs font-semibold uppercase tracking-widest text-band-accent">Manual de marca</p>
+      <h1 class="mt-2 max-w-3xl text-3xl font-semibold tracking-tight md:text-6xl">{{TITLE}}</h1>
+      <p class="mt-3 max-w-2xl text-lg text-on-band-muted">{{PURPOSE}}</p>
+    </div>
+  </header>
+
+  <main id="conteudo" class="mx-auto max-w-4xl space-y-10 px-3 py-8 sm:px-4 md:space-y-12">
+
+    <section aria-labelledby="proposito">
+      <h2 id="proposito" class="text-2xl font-semibold tracking-tight md:text-3xl">Propósito e posicionamento</h2>
+      <p class="mt-3 max-w-3xl text-lg">{{PURPOSE}}</p>
+      <dl class="mt-6 grid gap-4 md:grid-cols-3">
+        <div class="rounded-lg border border-line bg-surface p-4">
+          <dt class="text-xs font-semibold uppercase tracking-widest text-fg-subtle">Público</dt>
+          <dd class="mt-2 text-sm text-fg-muted">{{PERSONA}}</dd>
+        </div>
+        <div class="rounded-lg border border-line bg-surface p-4">
+          <dt class="text-xs font-semibold uppercase tracking-widest text-fg-subtle">Território</dt>
+          <dd class="mt-2 text-sm text-fg-muted">{{TERRITORY}}</dd>
+        </div>
+        <div class="rounded-lg border border-line bg-surface p-4">
+          <dt class="text-xs font-semibold uppercase tracking-widest text-fg-subtle">Arquétipo</dt>
+          <dd class="mt-2 text-sm text-fg-muted">{{ARCHETYPE}}</dd>
+        </div>
+      </dl>
+      <ul class="mt-4 flex flex-wrap gap-2" aria-label="Atributos da marca">
+        {{ATTRIBUTE_CHIPS}}
+      </ul>
+    </section>
+
+    <section aria-labelledby="tom" class="border-t border-line pt-8">
+      <h2 id="tom" class="text-2xl font-semibold tracking-tight md:text-3xl">Tom de voz</h2>
+      <p class="mt-2 max-w-3xl text-fg-muted">A voz nasce dos atributos aprovados. Ajuste as listas com o cliente antes de publicar.</p>
+      <div class="mt-6 grid gap-4 md:grid-cols-2">
+        <div class="rounded-lg border-l-4 border-primary bg-surface p-4">
+          <h3 class="text-lg font-semibold">SOMOS</h3>
+          <ul class="mt-3 list-disc space-y-1 pl-5 text-sm text-fg-muted">
+            {{SOMOS_LIST}}
+          </ul>
+        </div>
+        <div class="rounded-lg border-l-4 border-line-strong bg-surface p-4">
+          <h3 class="text-lg font-semibold">NÃO SOMOS</h3>
+          <ul class="mt-3 list-disc space-y-1 pl-5 text-sm text-fg-muted">
+            {{NAO_SOMOS_LIST}}
+          </ul>
+        </div>
+      </div>
+      <div class="mt-6 grid gap-4 md:grid-cols-2">
+        <figure class="rounded-lg border border-line bg-surface p-4">
+          <figcaption class="text-xs font-semibold uppercase tracking-widest text-fg-subtle">Certo</figcaption>
+          <blockquote class="mt-2">{{PURPOSE}}</blockquote>
+        </figure>
+        <figure class="rounded-lg border border-line bg-surface p-4">
+          <figcaption class="text-xs font-semibold uppercase tracking-widest text-fg-subtle">Errado</figcaption>
+          <blockquote class="mt-2 text-fg-muted">[placeholder — a mesma informação em tom oposto: genérica, sem ponto de vista e sem prova.]</blockquote>
+        </figure>
+      </div>
+    </section>
+
+    <section aria-labelledby="cores" class="border-t border-line pt-8">
+      <h2 id="cores" class="text-2xl font-semibold tracking-tight md:text-3xl">Cores</h2>
+      <p class="mt-2 max-w-3xl text-fg-muted">HEX aprovado é a fonte da verdade; RGB deriva dele. Pantone é uma aproximação e precisa de confirmação na prova física.</p>
+      <div class="mt-6 grid gap-4 sm:grid-cols-2 md:grid-cols-3">
+        {{COLOR_CARDS}}
+      </div>
+
+      <h3 class="mt-8 text-xl font-semibold">Pares permitidos</h3>
+      <div class="be-scroll-x mt-3 rounded-lg border border-line bg-surface">
+        <table class="be-table min-w-[560px]">
+          <caption>Combinações aprovadas de fundo e texto, com contraste calculado no build.</caption>
+          <thead>
+            <tr>
+              <th scope="col">Fundo</th>
+              <th scope="col">Texto</th>
+              <th scope="col">Contraste</th>
+              <th scope="col">Nível</th>
+              <th scope="col">Uso</th>
+            </tr>
+          </thead>
+          <tbody>
+            {{PAIR_ROWS}}
+          </tbody>
+        </table>
+      </div>
+
+      <h3 class="mt-8 text-xl font-semibold">Gradiente</h3>
+      <div class="mt-3 flex flex-col gap-4 md:flex-row md:items-center">
+        <div class="be-swatch h-10 w-full bg-grad-brand md:w-1/2" role="img" aria-label="Gradiente de {{GRADIENT_FROM}} para {{GRADIENT_TO}} a 45 graus"></div>
+        <p class="max-w-md text-sm text-fg-muted">Exatamente dois stops 50/50 a 45°, de {{GRADIENT_FROM}} para {{GRADIENT_TO}}. É o único gradiente permitido; não acrescente terceira cor nem mude o ângulo.</p>
+      </div>
+    </section>
+
+    <section aria-labelledby="tipografia" class="border-t border-line pt-8">
+      <h2 id="tipografia" class="text-2xl font-semibold tracking-tight md:text-3xl">Tipografia</h2>
+      <div class="mt-6 grid gap-4 md:grid-cols-2">
+        <div class="rounded-lg border border-line bg-surface p-4">
+          <p class="text-xs font-semibold uppercase tracking-widest text-fg-subtle">Display</p>
+          <p class="mt-2 text-2xl font-semibold">{{FONT_DISPLAY}}</p>
+          <p class="mt-2 text-xs text-fg-muted">Títulos e números. Uma família só; não misture com outra display.</p>
+        </div>
+        <div class="rounded-lg border border-line bg-surface p-4">
+          <p class="text-xs font-semibold uppercase tracking-widest text-fg-subtle">Corpo</p>
+          <p class="mt-2 text-2xl">{{FONT_BODY}}</p>
+          <p class="mt-2 text-xs text-fg-muted">Leitura contínua. Entrelinha acoplada ao tamanho; não ajuste por parágrafo.</p>
+        </div>
+      </div>
+      <p class="mt-4 text-sm text-fg-muted">Escala: tamanho = {{SCALE_BASE}} × {{SCALE_RATIO}}<sup>n</sup>; entrelinha = 1,6 − 0,07n, com piso de 1,05.</p>
+      <div class="be-scroll-x mt-3 rounded-lg border border-line bg-surface">
+        <table class="be-table min-w-[520px]">
+          <caption>Escala tipográfica gerada a partir de base e razão aprovadas.</caption>
+          <thead>
+            <tr>
+              <th scope="col">Token</th>
+              <th scope="col">Tamanho</th>
+              <th scope="col">Entrelinha</th>
+              <th scope="col">Amostra</th>
+            </tr>
+          </thead>
+          <tbody>
+            {{TYPE_ROWS}}
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section aria-labelledby="logo" class="border-t border-line pt-8">
+      <h2 id="logo" class="text-2xl font-semibold tracking-tight md:text-3xl">Logo</h2>
+      <!-- logo: breathing area / área de respiro = altura S (var(--b-space-1), 8px) em todos os lados; nada entra nessa margem. -->
+      <p class="mt-2 max-w-3xl text-fg-muted">A área de respiro é igual à altura S ({{LOGO_BREATHING}}) em todos os lados. Uma cor via <code class="text-link">currentColor</code>, sem sombra, gradiente ou contorno.</p>
+
+      <div class="mt-6 grid gap-4 md:grid-cols-3">
+        <div class="rounded-lg border border-line bg-surface p-4">
+          <p class="text-xs font-semibold uppercase tracking-widest text-fg-subtle">C · símbolo + wordmark</p>
+          <div class="mt-3">{{LOGO_C}}</div>
+          <p class="mt-3 text-xs text-fg-muted">Primeira escolha. Símbolo com 2–3 formas geométricas.</p>
+        </div>
+        <div class="rounded-lg border border-line bg-surface p-4">
+          <p class="text-xs font-semibold uppercase tracking-widest text-fg-subtle">B · monograma</p>
+          <div class="mt-3">{{LOGO_B}}</div>
+          <p class="mt-3 text-xs text-fg-muted">Quando o símbolo quebra abaixo de 24px.</p>
+        </div>
+        <div class="rounded-lg border border-line bg-surface p-4">
+          <p class="text-xs font-semibold uppercase tracking-widest text-fg-subtle">A · wordmark</p>
+          <div class="mt-3">{{LOGO_A}}</div>
+          <p class="mt-3 text-xs text-fg-muted">Quando não há símbolo que sobreviva a 16px.</p>
+        </div>
+      </div>
+      <p class="mt-4 text-sm text-fg-muted">Variante aprovada: <strong class="font-semibold text-fg">{{LOGO_VARIANT}}</strong>. {{LOGO_NOTES}}</p>
+
+      <h3 class="mt-8 text-xl font-semibold">Tamanhos e área de respiro</h3>
+      <div class="mt-3 flex flex-wrap items-end gap-6">
+        {{LOGO_SIZE_SAMPLES}}
+      </div>
+      <p class="mt-3 text-xs text-fg-subtle">16px · 24px · 48px — a marca não encolhe abaixo de 16px. A borda tracejada representa a área S.</p>
+
+      <h3 class="mt-8 text-xl font-semibold">Misuses (usos proibidos)</h3>
+      <!-- manual:misuses recolor rotate stretch replace shadow low-contrast -->
+      <ul class="mt-3 grid gap-2 text-sm text-fg-muted sm:grid-cols-2">
+        <li>Recolorir fora das cores aprovadas ou aplicar gradiente no logo.</li>
+        <li>Rotacionar, inclinar ou espelhar o símbolo.</li>
+        <li>Esticar, comprimir ou mudar a proporção entre símbolo e wordmark.</li>
+        <li>Trocar o símbolo por emoji, ícone genérico ou imagem detalhada.</li>
+        <li>Aplicar sombra, brilho, contorno ou efeito 3D.</li>
+        <li>Colocar sobre foto ou cor sem contraste AA.</li>
+      </ul>
+    </section>
+
+    <section aria-labelledby="grid" class="border-t border-line pt-8">
+      <h2 id="grid" class="text-2xl font-semibold tracking-tight md:text-3xl">Grid e espaçamento</h2>
+      <p class="mt-2 max-w-3xl text-fg-muted">A unidade é 8px. Todo espaçamento é múltiplo dela; nada de valores soltos entre 8 e 16 ou entre 16 e 24.</p>
+      <div class="be-scroll-x mt-4 rounded-lg border border-line bg-surface">
+        <table class="be-table min-w-[480px]">
+          <caption>Tokens de espaçamento — todos múltiplos de 8px.</caption>
+          <thead>
+            <tr>
+              <th scope="col">Token</th>
+              <th scope="col">Valor</th>
+              <th scope="col">Uso</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td>--b-space-1</td><td>8px</td><td>respiro mínimo, ícone e etiqueta</td></tr>
+            <tr><td>--b-space-2</td><td>16px</td><td>entre linhas de um bloco</td></tr>
+            <tr><td>--b-space-3</td><td>24px</td><td>padding de cartão compacto</td></tr>
+            <tr><td>--b-space-4</td><td>32px</td><td>padding de cartão e coluna</td></tr>
+            <tr><td>--b-space-6</td><td>48px</td><td>entre grupos</td></tr>
+            <tr><td>--b-space-8</td><td>64px</td><td>entre seções no celular</td></tr>
+            <tr><td>--b-space-12</td><td>96px</td><td>entre seções no desktop</td></tr>
+            <tr><td>--b-space-16</td><td>128px</td><td>abertura de página</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section aria-labelledby="imagem" class="border-t border-line pt-8">
+      <h2 id="imagem" class="text-2xl font-semibold tracking-tight md:text-3xl">Fotografia e ícones</h2>
+      <div class="mt-6 grid gap-4 md:grid-cols-2">
+        <div class="rounded-lg border border-line bg-surface p-4">
+          <h3 class="text-lg font-semibold">Checklist de fotografia</h3>
+          <ul class="mt-3 list-disc space-y-1 pl-5 text-sm text-fg-muted">
+            <li>Luz natural ou uma fonte direcional; sem filtro que mude a cor da pele.</li>
+            <li>Enquadramento coerente com o território: {{TERRITORY}}</li>
+            <li>Pessoa e produto reais; nunca banco de imagem sem direito de uso.</li>
+            <li>Contraste suficiente para texto sobreposto; se não houver, use faixa sólida.</li>
+          </ul>
+        </div>
+        <div class="rounded-lg border border-line bg-surface p-4">
+          <h3 class="text-lg font-semibold">Checklist de ícones</h3>
+          <ul class="mt-3 list-disc space-y-1 pl-5 text-sm text-fg-muted">
+            <li>Traço de 1,75px, pontas arredondadas e grade de 24px.</li>
+            <li>Uma cor via currentColor; sem preenchimento decorativo.</li>
+            <li>Legível a 16px; se precisar de detalhe, não é ícone.</li>
+            <li>Sempre com nome acessível quando carrega significado.</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <section aria-labelledby="assinatura" class="border-t border-line pt-8">
+      <h2 id="assinatura" class="text-2xl font-semibold tracking-tight md:text-3xl">Como assinar</h2>
+      <ul class="mt-3 list-disc space-y-1 pl-5 text-fg-muted">
+        <li>Assinatura principal: variante {{LOGO_VARIANT}} no canto inferior ou no topo, sempre com a área S livre.</li>
+        <li>Peças verticais usam o monograma; peças longas usam o wordmark.</li>
+        <li>Co-branding: o logo da marca vem primeiro e mantém a área S; o parceiro entra em cinza neutro ou em versão monocromática.</li>
+        <li>Crédito de assinatura: “{{BRAND_NAME}}” em corpo, nunca recriado com outra fonte.</li>
+      </ul>
+      <p class="mt-4 text-xs text-fg-subtle">Aprovação: registre <code class="text-link">"aceite": true</code> no brand.json apenas depois do ok explícito do cliente neste manual.</p>
+    </section>
+
+  </main>
+
+  <footer class="border-t border-line">
+    <div class="mx-auto flex max-w-4xl flex-wrap items-center justify-between gap-3 px-3 py-4 text-xs text-fg-subtle sm:px-4">
+      <span>{{BRAND_NAME}}</span>
+      <span>Manual gerado a partir de brand.json · [placeholder — versão e data]</span>
+    </div>
+  </footer>
+</body>

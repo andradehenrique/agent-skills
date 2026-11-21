@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="pt-BR" data-theme-default="{{THEME_DEFAULT}}"{{THEME_LOCK}}>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<title>{{TITLE}}</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+{{FONT_LINKS}}
+<script>
+{{THEME_JS}}
+</script>
+<style>
+{{THEME_CSS}}
+</style>
+<style>
+@layer components {
+  /* ---------- shared shell ---------- */
+  .be-skip {
+    position: absolute; left: 8px; top: -100px; z-index: 100;
+    padding: 8px 16px; border-radius: var(--b-radius-md);
+    background: var(--b-surface-raised); color: var(--b-fg); text-decoration: none;
+  }
+  .be-skip:focus { top: 8px; }
+
+  .be-brand {
+    display: inline-flex; align-items: center; gap: 8px;
+    min-width: 0; text-decoration: none;
+  }
+  .be-mark { display: inline-block; flex: none; width: 24px; height: 24px; fill: currentColor; }
+  .be-wordmark {
+    font-family: var(--b-display); font-weight: 600; letter-spacing: -0.01em;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .be-monogram {
+    display: inline-flex; flex: none; align-items: center; justify-content: center;
+    width: 24px; height: 24px; border-radius: var(--b-radius-md);
+    background: var(--b-primary); color: var(--b-on-primary);
+    font-family: var(--b-display); font-size: var(--b-text-sm); font-weight: 700;
+  }
+
+  [data-theme-toggle] .be-icon-sun { display: none; }
+  [data-theme="dark"] [data-theme-toggle] .be-icon-moon { display: none; }
+  [data-theme="dark"] [data-theme-toggle] .be-icon-sun { display: inline; }
+  [data-theme-lock] [data-theme-toggle] { display: none !important; }
+
+  /* ---------- tables (report, manual) ---------- */
+  .be-table { width: 100%; border-collapse: collapse; text-align: left; font-size: var(--b-text-sm); }
+  .be-table caption {
+    caption-side: top; text-align: left; padding-bottom: 8px; color: var(--b-fg-muted);
+  }
+  .be-table th, .be-table td {
+    padding: 8px 16px; border-bottom: 1px solid var(--b-line); vertical-align: top;
+  }
+  .be-table thead th { font-size: var(--b-text-xs); color: var(--b-fg-subtle); font-weight: 600; }
+  .be-table tbody tr:hover { background: var(--b-surface-muted); }
+  .be-scroll-x { overflow-x: auto; }
+
+  /* ---------- manual ---------- */
+  .be-swatch { border: 1px solid var(--b-line); border-radius: var(--b-radius-md); }
+
+  /* ---------- deck (1280x720 stage) ---------- */
+  .be-deck { display: flex; flex-direction: column; gap: 16px; padding: 16px; max-width: 960px; margin: 0 auto; }
+  .be-slide {
+    container-type: inline-size;
+    position: relative; display: flex; flex-direction: column; overflow: hidden;
+    min-height: min(72svh, 640px);
+    padding: 32px 24px;
+    border: 1px solid var(--b-line); border-radius: var(--b-radius-xl);
+    background: var(--b-surface); color: var(--b-fg);
+  }
+  .be-slide--band { background: var(--b-band); color: var(--b-on-band); border-color: var(--b-band); }
+  .be-deck-ui {
+    position: sticky; top: 0; z-index: 20;
+    display: flex; align-items: center; gap: 12px;
+    padding: 10px 16px;
+    background: color-mix(in srgb, var(--b-canvas) 86%, transparent);
+    backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--b-line);
+  }
+  .be-deck-ui [data-deck-nav], .be-deck-ui [data-deck-progress] { display: none; }
+  .be-progress { position: absolute; left: 0; top: -1px; height: 2px; background: var(--b-accent); transition: width .28s ease; }
+
+  html[data-deck-mode="present"], html[data-deck-mode="present"] body { height: 100%; overflow: hidden; }
+  html[data-deck-mode="present"] .be-deck { position: fixed; inset: 0 0 56px 0; display: block; padding: 0; max-width: none; }
+  html[data-deck-mode="present"] .be-slide {
+    position: absolute; left: 50%; top: 50%;
+    width: 1280px; height: 720px; min-height: 0;
+    padding: 64px 80px; border-radius: 0; border: 0;
+    transform: translate(-50%, -50%) scale(var(--be-scale, 1));
+    transform-origin: center;
+    opacity: 0; visibility: hidden;
+    transition: opacity .28s ease, visibility .28s;
+  }
+  html[data-deck-mode="present"] .be-slide[aria-current="true"] { opacity: 1; visibility: visible; }
+  html[data-deck-mode="present"] .be-deck-ui {
+    position: fixed; top: auto; bottom: 0; left: 0; right: 0; height: 56px;
+    padding: 0 20px; border-bottom: 0; border-top: 1px solid var(--b-line);
+  }
+  html[data-deck-mode="present"] .be-deck-ui [data-deck-nav] { display: inline-flex; }
+  html[data-deck-mode="present"] .be-deck-ui [data-deck-progress] { display: block; }
+  html:not([data-deck-mode="present"]) [data-present-only] { display: none !important; }
+
+  /* Slide that overflowed the 1280x720 stage: flag it before delivery. */
+  html[data-deck-mode="present"] .be-slide[data-overflow] { outline: 3px dashed var(--b-focus); outline-offset: -3px; }
+
+  /* ---------- social mockups (1080 reference, not an export) ---------- */
+  .be-social-stage { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 32px; max-width: 100%; overflow-x: auto; padding-bottom: 16px; }
+  .be-social-frame {
+    flex: none; overflow: hidden;
+    width: 1080px;
+    border: 1px solid var(--b-line);
+    background: var(--b-surface); color: var(--b-fg);
+  }
+  .be-social-frame[data-social="square"] { height: 1080px; }
+  .be-social-frame[data-social="story"] { height: 1920px; }
+  .be-social-frame--band { background: var(--b-band); color: var(--b-on-band); border-color: var(--b-band); }
+
+  @media print {
+    [data-theme-toggle], [data-print-hide], .be-deck-ui { display: none !important; }
+    .be-deck { position: static !important; display: block !important; padding: 0 !important; }
+    .be-slide {
+      position: relative !important; left: auto !important; top: auto !important;
+      transform: none !important; opacity: 1 !important; visibility: visible !important;
+      width: 1280px !important; height: 720px !important; min-height: 0 !important;
+      padding: 64px 80px !important; border-radius: 0 !important; border: 0 !important;
+      break-after: page;
+    }
+    .be-social-stage { display: block; overflow: visible; }
+    .be-social-frame { break-inside: avoid; margin-bottom: 32px; }
+  }
+}
+</style>
+<script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@{{TAILWIND_VERSION}}"></script>
+<style type="text/tailwindcss">
+{{TAILWIND_THEME}}
+</style>
+</head>
+{{BODY}}
+</html>

@@ -1,0 +1,68 @@
+<body class="min-h-svh bg-canvas font-sans text-fg antialiased" data-format="social">
+  <a href="#conteudo" class="be-skip">Pular para o conteúdo</a>
+
+  <header class="border-b border-line bg-canvas">
+    <div class="mx-auto flex max-w-5xl items-center justify-between gap-3 px-3 py-3 sm:px-4">
+      <!-- logo: breathing area / área de respiro = S (var(--b-space-1)) em todos os lados. -->
+      {{LOGO_HEADER}}
+      {{THEME_TOGGLE}}
+    </div>
+  </header>
+
+  <main id="conteudo" class="mx-auto max-w-5xl px-3 py-8 sm:px-4">
+    <h1 class="text-3xl font-semibold tracking-tight md:text-5xl">{{TITLE}}</h1>
+    <p class="mt-3 max-w-2xl text-fg-muted">Mockups HTML em tamanho real para referência de arte-final. Não são export PNG/JPG: use como guia de composição e recorte no app de destino.</p>
+
+    <!-- social:square · 1080×1080, referência de feed -->
+    <section aria-labelledby="post-quadrado" class="mt-8">
+      <h2 id="post-quadrado" class="text-2xl font-semibold tracking-tight">1080 × 1080 · feed</h2>
+      <p class="mt-2 text-sm text-fg-muted">[placeholder — objetivo do post e CTA.]</p>
+      <div class="be-social-stage mt-4">
+        <div data-social="square" class="be-social-frame be-social-frame--band" role="img" aria-label="Mockup de post quadrado 1080 por 1080">
+          <div class="flex h-full flex-col justify-between p-8">
+            <div class="flex items-center justify-between gap-4">
+              {{LOGO_MARK_ONLY}}
+              <p class="text-lg text-on-band-muted">@[placeholder]</p>
+            </div>
+            <div>
+              <p class="text-sm font-semibold uppercase tracking-widest text-band-accent">{{ATTRIBUTE_LEAD}}</p>
+              <h3 class="mt-4 max-w-3xl text-6xl font-semibold leading-tight tracking-tight">{{HEADLINE}}</h3>
+              <p class="mt-4 max-w-2xl text-2xl text-on-band-muted">[placeholder — uma frase que interrompe o feed.]</p>
+            </div>
+            <div class="flex items-center justify-between gap-4">
+              <span class="inline-flex h-6 items-center rounded-full bg-highlight px-3 text-lg font-semibold text-on-highlight">[placeholder — ação]</span>
+              <p class="text-lg text-on-band-muted">[placeholder — @perfil]</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- social:story · 1080×1920, referência de stories/reels -->
+    <section aria-labelledby="post-story" class="mt-10 border-t border-line pt-6">
+      <h2 id="post-story" class="text-2xl font-semibold tracking-tight">1080 × 1920 · story</h2>
+      <p class="mt-2 text-sm text-fg-muted">[placeholder — sequência de 1–3 telas e o que cada uma pede.]</p>
+      <div class="be-social-stage mt-4">
+        <div data-social="story" class="be-social-frame" role="img" aria-label="Mockup de story vertical 1080 por 1920">
+          <div class="flex h-full flex-col justify-between p-8">
+            <div class="flex items-center justify-between gap-4">
+              {{LOGO_MARK_ONLY}}
+              <p class="text-lg text-fg-muted">[placeholder — 01/03]</p>
+            </div>
+            <div class="py-8">
+              <p class="text-sm font-semibold uppercase tracking-widest text-accent">{{ATTRIBUTE_LEAD}}</p>
+              <h3 class="mt-4 max-w-3xl text-6xl font-semibold leading-tight tracking-tight">{{HEADLINE}}</h3>
+              <p class="mt-4 max-w-2xl text-2xl text-fg-muted">[placeholder — uma ideia por tela.]</p>
+            </div>
+            <div>
+              <p class="text-2xl font-semibold">[placeholder — arraste para cima]</p>
+              <p class="mt-2 text-lg text-fg-subtle">[placeholder — link ou cupom com validade]</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <p class="mt-8 text-xs text-fg-subtle">[placeholder — textos, oferta e validade precisam de fonte real antes de publicar.]</p>
+  </main>
+</body>
