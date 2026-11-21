@@ -423,7 +423,15 @@ CSS_COMMENT_RE = re.compile(r"/\*.*?\*/", re.S)
 TYPE_TOKEN_RE = re.compile(r"--b-text-([a-z0-9]+)\s*:\s*\d+(?:\.\d+)?px")
 SPACING_UNIT_RE = re.compile(r"--b-unit\s*:\s*(4|8)px")
 BRAND_GRADIENT_RE = re.compile(r"--b-gradient\s*:\s*[^;}\n]+;?")
-DARK_BLOCK_RE = re.compile(r"""\[\s*data-theme\s*=\s*["']?dark["']?\s*\]""")
+# A real dark block declares tokens (or a dark color-scheme) after the
+# selector. Bare selectors such as ``@custom-variant dark (...)`` and
+# ``[data-theme="dark"] [data-theme-toggle] { ... }`` are emitted on every
+# generated page and must not imply that the brand has both modes.
+DARK_BLOCK_RE = re.compile(
+    r"""\[\s*data-theme\s*=\s*["']?dark["']?\s*\]\s*\{(?:(?!\}).)*?"""
+    r"""(?:--b-|color-scheme\s*:\s*dark)""",
+    re.S,
+)
 
 LOGO_CLASSES = frozenset({"be-mark", "be-wordmark", "be-monogram", "be-brand"})
 MISUSE_TERMS = (

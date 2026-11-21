@@ -324,6 +324,26 @@ def test_theme_lock_removes_toggle_requirement() -> None:
     assert not has(html, "structure"), findings(html)
 
 
+def test_dark_presence_requires_a_token_block() -> None:
+    """Base-shell selectors and the Tailwind custom variant are not dark mode."""
+
+    base_shell = (
+        "<style>"
+        "@custom-variant dark (&:where([data-theme=dark], [data-theme=dark] *));"
+        '[data-theme="dark"] [data-theme-toggle] { display: none; }'
+        "</style>"
+    )
+    dark_only = build(theme="dark", toggle=False, head_extra=base_shell)
+    assert not has(dark_only, "structure"), findings(dark_only)
+
+    generated_block = (
+        '<style>[data-theme="dark"] { color-scheme: dark; '
+        "--b-canvas: #101010; --b-fg: #F5F5F5; }</style>"
+    )
+    both = build(theme="light", toggle=False, head_extra=generated_block)
+    assert_rule(both, "structure")
+
+
 # ---------------------------------------------------------------------------
 # Icons and images
 # ---------------------------------------------------------------------------
