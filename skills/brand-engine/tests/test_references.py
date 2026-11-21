@@ -15,6 +15,58 @@ ROOT = Path(__file__).resolve().parents[1]
 SKILL = ROOT / "SKILL.md"
 REFS = ROOT / "references"
 REFERENCE_NAMES = ("discovery", "tokens", "formats", "voice", "logo")
+APPLICATION_REFERENCES = (
+    "components",
+    "design-principles",
+    "sections",
+    "integrations",
+)
+COMPONENT_PATTERNS = (
+    "actions",
+    "badges",
+    "cards",
+    "kpi",
+    "callout",
+    "table",
+    "definition list",
+    "tabs",
+    "progress",
+    "css bars",
+    "donut",
+    "chart.js",
+    "timeline",
+    "empty",
+    "skeleton",
+    "form",
+    "avatar",
+    "quote",
+    "code",
+    "frames",
+    "icons",
+)
+SECTION_TERMS = (
+    "hero",
+    "proof",
+    "features",
+    "pricing",
+    "menu",
+    "gallery",
+    "timeline",
+    "faq",
+    "team",
+    "logos",
+    "cta",
+    "contact",
+    "footer",
+    "app shell",
+    "stats",
+    "table",
+    "list",
+    "filters",
+    "states",
+    "modal",
+    "form",
+)
 ROUTE_FIELDS = (
     "Ideia",
     "Paleta",
@@ -309,8 +361,174 @@ def test_logo_keeps_cascade() -> None:
     )
 
 
+def test_components_has_required_patterns() -> None:
+    text = read_ref("components")
+    lowered = text.lower()
+
+    headings = re.findall(r"(?m)^## (.+)$", text)
+    assert len(headings) == len(COMPONENT_PATTERNS), (
+        "components.md must document exactly 21 patterns; "
+        f"found {len(headings)}: {headings}"
+    )
+    for pattern in COMPONENT_PATTERNS:
+        assert pattern in lowered, f"components.md is missing the {pattern!r} pattern"
+
+    for token in (
+        "bg-surface",
+        "text-fg-muted",
+        "border-line",
+        "border-line-input",
+        "bg-success-soft",
+        "text-success",
+        "bg-chart-1",
+        "text-on-band",
+    ):
+        assert token in text, f"components.md must use the v2 token {token!r}"
+    assert "tokens only" in lowered or "semantic tokens" in lowered, (
+        "components.md must state the tokens-only rule"
+    )
+    assert "dark" in lowered, "every component must be documented in light and dark"
+    assert "aria" in lowered, "components.md must document accessible names/roles"
+    assert "wcag" in lowered, "components.md must reference WCAG 2.2 AA"
+
+
+def test_components_use_icons_charts_placehold() -> None:
+    text = read_ref("components")
+    for fragment in (
+        "<iconify-icon",
+        "currentColor",
+        "BrandCharts",
+        "Chart.js",
+        "placehold.co",
+        "--b-chart-1",
+        "data-theme",
+    ):
+        assert fragment in text, f"components.md must document {fragment!r}"
+
+
+def test_design_principles_has_composition_directions() -> None:
+    text = read_ref("design-principles")
+    lowered = text.lower()
+
+    for principle in (
+        "message",
+        "space",
+        "surfaces",
+        "hierarchy",
+        "mobile-first",
+        "data",
+        "accessib",
+        "dark",
+        "avoid",
+    ):
+        assert principle in lowered, (
+            f"design-principles.md must cover {principle!r}"
+        )
+
+    for direction in ("editorial", "structured", "poster", "minimal"):
+        assert direction in lowered, (
+            f"design-principles.md must define the {direction!r} direction"
+        )
+    assert "starting point" in lowered and "mold" in lowered, (
+        "design-principles.md must say the skeleton is a starting point, not a mold"
+    )
+    assert "one accent" in lowered or "um destaque" in lowered, (
+        "design-principles.md must limit the accent to one per screen"
+    )
+    assert "unsplash" in lowered and "undraw" in lowered, (
+        "design-principles.md must rule out Unsplash and unDraw"
+    )
+
+
+def test_sections_catalog_has_required_sections() -> None:
+    text = read_ref("sections")
+    lowered = text.lower()
+
+    headings = re.findall(r"(?m)^## (.+)$", text)
+    assert len(headings) == 20, (
+        "sections.md must catalog 20 sections; "
+        f"found {len(headings)}: {headings}"
+    )
+    for term in SECTION_TERMS:
+        assert term in lowered, f"sections.md is missing the {term!r} section"
+
+    for variant in ("split", "centered", "editorial", "product"):
+        assert variant in lowered, f"hero must document the {variant!r} variant"
+
+    for label in ("**When:**", "**Structure:**", "**Classes/tokens:**", "**Copy job:**"):
+        assert text.count(label) == len(headings), (
+            f"every section needs a {label} line "
+            f"({text.count(label)} found for {len(headings)} sections)"
+        )
+    assert "not a renderer" in lowered, (
+        "sections.md must stay a catalog, not a renderer"
+    )
+
+
+def test_integrations_documents_dependencies() -> None:
+    text = read_ref("integrations")
+    lowered = text.lower()
+
+    for fragment in (
+        "Tailwind v4",
+        "@tailwindcss/browser",
+        "4.3.3",
+        "@theme",
+        "@theme inline",
+        "@custom-variant dark",
+    ):
+        assert fragment in text, f"integrations.md must document {fragment!r}"
+
+    for fragment in (
+        "<iconify-icon",
+        "iconify-icon@3.0.0",
+        "currentColor",
+        "design.icons.family",
+        "assets/icons.json",
+        "fluent",
+        "lucide",
+        "phosphor",
+        "tabler",
+    ):
+        assert fragment in text, f"integrations.md must document {fragment!r}"
+
+    for fragment in (
+        "BrandCharts",
+        "colors",
+        "create",
+        "refresh",
+        "Chart.js",
+        "chart.js@4.4.7",
+        "--b-chart-1",
+        "--b-chart-8",
+        "--b-fg-subtle",
+        "--b-line",
+        "--b-surface",
+        "data-theme",
+    ):
+        assert fragment in text, f"integrations.md must document {fragment!r}"
+
+    assert "https://placehold.co/{w}x{h}/{bg}/{fg}?text=" in text, (
+        "integrations.md must spell out the placehold.co URL pattern"
+    )
+    for fragment in ("data-placehold-dark", "hex without", "alt"):
+        assert fragment in text, f"integrations.md must document {fragment!r}"
+
+    for fragment in (".axe.html", "axe-core", "wcag22aa", "#axe-out", "WCAG 2.2"):
+        assert fragment in text, f"integrations.md must document {fragment!r}"
+
+    assert "internet" in lowered, "integrations.md must state the internet requirement"
+    assert "offline" in lowered, "integrations.md must state the offline caveat"
+    assert "Unsplash" in text and "unDraw" in text, (
+        "integrations.md must rule out Unsplash and unDraw by name"
+    )
+    assert "not used" in lowered or "never" in lowered, (
+        "integrations.md must state that Unsplash/unDraw are not used"
+    )
+
+
 def test_references_have_no_v1_or_product_flavor() -> None:
-    for name in REFERENCE_NAMES:
+    for name in REFERENCE_NAMES + APPLICATION_REFERENCES:
         text = read_ref(name)
         lowered = text.lower()
         for banned in ("--flavor", "data-flavor", "gc-", "gupy"):
