@@ -77,15 +77,15 @@ def test_loads_v2_brand() -> None:
     data = mod.load_brand(SAMPLE_BRAND)
 
     assert data["version"] == 2
-    assert data["design"]["colors"]["primary"]["name"] == "Petróleo"
+    assert data["design"]["colors"]["primary"]["name"] == "Brasa"
 
     model = mod._build_model(data)
-    assert model.name == "Omnia Labs"
-    assert model.purpose.startswith("Traduzir IA")
-    assert model.persona and model.territory and model.archetype == "Sábio"
-    assert model.attributes == ("claro", "humano", "preciso", "sem jargão")
-    assert model.lookup["petroleo"].hex == "#0F5A6B"
-    assert model.lookup["petroleo"].role == "primary"
+    assert model.name == "Forno & Brasa"
+    assert model.purpose.startswith("Levar pizza")
+    assert model.persona and model.territory and model.archetype == "O Criador"
+    assert model.attributes == ("rústico", "caloroso", "direto", "artesanal")
+    assert model.lookup["brasa"].hex == "#A6402F"
+    assert model.lookup["brasa"].role == "primary"
     assert {color.role for color in model.colors} == {
         "canvas",
         "surface",
@@ -172,7 +172,7 @@ def test_rejects_v1_color_shape() -> None:
 def test_rejects_v1_leftovers() -> None:
     expect_error(lambda d: d.__setitem__("allowed_pairs", []), "allowed_pairs")
     expect_error(
-        lambda d: d.__setitem__("gradient", {"from": "Papel", "to": "Giz", "angle": 45}),
+        lambda d: d.__setitem__("gradient", {"from": "Creme", "to": "Massa", "angle": 45}),
         "schema v1",
     )
     expect_error(
@@ -211,16 +211,16 @@ def test_rejects_invalid_hex() -> None:
 
 def test_rejects_duplicate_color_names() -> None:
     def mutate(data: dict[str, Any]) -> None:
-        data["design"]["colors"]["support"][0]["name"] = "Papel"
+        data["design"]["colors"]["support"][0]["name"] = "Creme"
 
     expect_error(mutate, "duplicate")
 
 
 def test_rejects_duplicate_slugs() -> None:
     def mutate(data: dict[str, Any]) -> None:
-        data["design"]["colors"]["support"][0]["name"] = "Petroleo"
+        data["design"]["colors"]["support"][0]["name"] = "Brasa"
 
-    expect_error(mutate, "petroleo")
+    expect_error(mutate, "brasa")
 
 
 # ---------------------------------------------------------------------------
@@ -311,12 +311,12 @@ def test_parses_gradient_with_via() -> None:
 
 def test_rejects_invalid_gradient() -> None:
     def mutate(data: dict[str, Any]) -> None:
-        data["design"]["theme"]["gradient"] = {"from": "Papel", "to": "Papel", "angle": 45}
+        data["design"]["theme"]["gradient"] = {"from": "Creme", "to": "Creme", "angle": 45}
 
     expect_error(mutate, "different")
 
     def unknown_color(data: dict[str, Any]) -> None:
-        data["design"]["theme"]["gradient"] = {"from": "Nada", "to": "Papel", "angle": 45}
+        data["design"]["theme"]["gradient"] = {"from": "Nada", "to": "Creme", "angle": 45}
 
     expect_error(unknown_color, "unknown colour")
 

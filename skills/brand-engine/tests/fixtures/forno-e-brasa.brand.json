@@ -1,32 +1,32 @@
 {
   "$schema": "https://brand-engine.local/brand.schema.json",
   "version": 2,
-  "name": "Omnia Labs",
-  "purpose": "Traduzir IA em operação real para empresas que precisam decidir agora.",
-  "persona": "Donos e diretores de PMEs que já sentem a pressão da IA.",
-  "territory": "editorial humanista com precisão técnica",
-  "archetype": "Sábio",
-  "attributes": ["claro", "humano", "preciso", "sem jargão"],
+  "name": "Forno & Brasa",
+  "purpose": "Levar pizza de fermentação longa e assada na lenha para a mesa de bairro, sem cerimônia.",
+  "persona": "Famílias e casais de 25 a 45 anos que pedem pizza no fim de semana e valorizam massa artesanal.",
+  "territory": "Rústico contemporâneo: barro, fogo e madeira, com acabamento limpo.",
+  "archetype": "O Criador",
+  "attributes": ["rústico", "caloroso", "direto", "artesanal"],
   "voice": {
-    "summary": "Explica antes de vender; mostra o método.",
-    "principles": ["conclusão primeiro", "número com base", "zero jargão"],
-    "avoid": ["hype de IA", "promessa sem dono"],
+    "summary": "Fala de forno, farinha e bairro; convida sem cerimônia.",
+    "principles": ["frase curta", "matéria concreta", "calor sem exagero"],
+    "avoid": ["gourmetização", "superlativo", "promessa de entrega"],
     "person": "você",
     "emoji": "none"
   },
   "design": {
     "colors": {
-      "canvas": {"name": "Papel", "hex": "#FBF8F1"},
-      "surface": {"name": "Giz", "hex": "#FFFFFF"},
-      "ink": {"name": "Tinta", "hex": "#1E1C17"},
-      "primary": {"name": "Petróleo", "hex": "#0F5A6B"},
-      "accent": {"name": "Areia", "hex": "#E8DFCE"},
-      "support": [{"name": "Oliva", "hex": "#7C8363"}]
+      "canvas": {"name": "Creme", "hex": "#F4E9D8", "note": "superfície clara"},
+      "surface": {"name": "Massa", "hex": "#FFFBF4", "note": "cartão e card"},
+      "ink": {"name": "Tinta", "hex": "#241A14", "note": "texto e contorno"},
+      "primary": {"name": "Brasa", "hex": "#A6402F", "note": "ação e assinatura"},
+      "accent": {"name": "Terracota", "hex": "#C97B4A", "note": "apoio quente"},
+      "support": [{"name": "Oliva", "hex": "#5F6B45", "note": "frescor e contraste"}]
     },
     "feedback": "auto",
     "charts": "auto",
     "type": {
-      "display": {"family": "Newsreader", "fallback": "Georgia, serif", "weight": 600},
+      "display": {"family": "Fraunces", "fallback": "Georgia, serif", "weight": 600},
       "body": {"family": "Source Sans 3", "fallback": "system-ui, sans-serif", "weight": 400},
       "scale": {"base": 16, "ratio": 1.25}
     },
@@ -37,9 +37,13 @@
       "gradient": null
     },
     "icons": {"family": "fluent", "style": "regular", "size": 16},
-    "imagery": {"mode": "abstract", "treatment": "papel, grão leve", "placeholder": "placehold"},
+    "imagery": {
+      "mode": "photo",
+      "treatment": "luz quente, madeira e massa em close, grão leve",
+      "placeholder": "placehold"
+    },
     "composition": {"direction": "editorial", "measure": "65ch", "grid": "12"},
-    "logo": {"variant": "C", "name": "Colchete", "notes": "Dois colchetes e um bloco."}
+    "logo": {"variant": "C", "name": "Chama", "notes": "Duas formas geométricas: chama e arco de forno."}
   },
   "aceite": false
 }
