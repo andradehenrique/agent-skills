@@ -19,8 +19,9 @@ user can react to.
 - The route already carries the proposed system. Keep one short summary (palette,
   type, shape, composition) next to it; there is no third gate. The manual gate
   remains the only mandatory gate.
-- `brand.json` is the state. "Ajusta X" regenerates theme, manual and brand-kit
-  and revalidates, without restarting discovery.
+- `brand.json` is the state. "Ajusta X" regenerates the theme, the manual, the
+  brand-kit and the delivered formats, then revalidates, without restarting
+  discovery.
 - Never invent a fact to fill a gap. Ask once; if it stays missing, write
   `[placeholder]` and keep going.
 
