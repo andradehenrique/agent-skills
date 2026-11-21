@@ -1,0 +1,44 @@
+{
+  "version": 2,
+  "name": "Omnia Labs",
+  "purpose": "Traduzir IA em operação real para empresas que precisam decidir agora.",
+  "persona": "Donos e diretores de PMEs que já sentem a pressão da IA.",
+  "territory": "editorial humanista com precisão técnica",
+  "archetype": "Sábio",
+  "attributes": ["claro", "humano", "preciso", "sem jargão"],
+  "voice": {
+    "summary": "Explica antes de vender; mostra o método.",
+    "principles": ["conclusão primeiro", "número com base", "zero jargão"],
+    "avoid": ["hype de IA", "promessa sem dono"],
+    "person": "você",
+    "emoji": "none"
+  },
+  "design": {
+    "colors": {
+      "canvas": {"name": "Papel", "hex": "#FBF8F1"},
+      "surface": {"name": "Giz", "hex": "#FFFFFF"},
+      "ink": {"name": "Tinta", "hex": "#1E1C17"},
+      "primary": {"name": "Petróleo", "hex": "#0F5A6B"},
+      "accent": {"name": "Areia", "hex": "#E8DFCE"},
+      "support": [{"name": "Oliva", "hex": "#7C8363"}]
+    },
+    "feedback": "auto",
+    "charts": "auto",
+    "type": {
+      "display": {"family": "Newsreader", "fallback": "Georgia, serif", "weight": 600},
+      "body": {"family": "Source Sans 3", "fallback": "system-ui, sans-serif", "weight": 400},
+      "scale": {"base": 16, "ratio": 1.25}
+    },
+    "shape": {"radius": "soft", "unit": 8, "shadows": "soft"},
+    "theme": {
+      "modes": ["light", "dark"],
+      "default": "light",
+      "gradient": null
+    },
+    "icons": {"family": "fluent", "style": "regular", "size": 16},
+    "imagery": {"mode": "abstract", "treatment": "papel, grão leve", "placeholder": "placehold"},
+    "composition": {"direction": "editorial", "measure": "65ch", "grid": "12"},
+    "logo": {"variant": "C", "name": "Colchete", "notes": "Dois colchetes e um bloco."}
+  },
+  "aceite": true
+}

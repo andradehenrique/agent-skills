@@ -1,9 +1,9 @@
 """Publication gate for the brand-engine v2 skill.
 
-The gate is the release contract: the evals exist and describe the three
-canonical jobs, the README row mirrors what ``SKILL.md`` promises (including
-when not to use it), the repository authoring checklist holds, and a fresh run
-of the generator for every one of the eight formats still passes
+The gate is the release contract: the evals exist and describe the six v2
+scenarios, the README row mirrors what ``SKILL.md`` promises (including when
+not to use it), the repository authoring checklist holds, and a fresh run of
+the generator for every one of the eight formats still passes
 ``check_page.py`` with zero ERROR.
 
 Run with the stdlib runner:
@@ -37,7 +37,14 @@ FORMATS = (
     "app",
     "blank",
 )
-TOPICS = ("vague pizzeria", "b2b consultancy", "internal report")
+TOPICS = (
+    "vague pizzeria",
+    "b2b consultancy",
+    "brutalist record label",
+    "luxury perfume",
+    "kids science museum",
+    "internal dashboard",
+)
 
 sys.path.insert(0, str(SCRIPTS))
 
@@ -76,13 +83,13 @@ def load_evals() -> dict:
     return data
 
 
-def evals_has_3_prompts(topics: tuple[str, ...] | list[str] = TOPICS) -> dict:
-    """Assert the three canonical eval scenarios and their contract."""
+def evals_has_six_scenarios(topics: tuple[str, ...] | list[str] = TOPICS) -> dict:
+    """Assert the six v2 eval scenarios and their contract."""
 
     data = load_evals()
     assert data.get("skill_name") == "brand-engine", "evals.json skill_name must be brand-engine"
     evals = data.get("evals")
-    assert isinstance(evals, list) and len(evals) == 3, "evals.json must define exactly 3 evals"
+    assert isinstance(evals, list) and len(evals) == 6, "evals.json must define exactly 6 evals"
 
     haystack = " ".join(
         str(item.get("prompt", "")) + " " + " ".join(item.get("tags", []))
@@ -103,14 +110,22 @@ def evals_has_3_prompts(topics: tuple[str, ...] | list[str] = TOPICS) -> dict:
         assert "manual" in expected.lower(), (
             "each eval must expect the mandatory manual gate before templates"
         )
-        assert "currentColor" in expected, (
-            "each eval must keep the logo one-color rule for the symbol"
+        assert "gate 2" in expected.lower() and "explicit ok" in expected.lower(), (
+            "each eval must stop at Gate 2 for an explicit ok"
         )
-        assert "bg-primary" in expected and "text-on-primary" in expected, (
-            "each eval must keep the monogram tile rule (bg-primary + text-on-primary)"
-        )
+        assert "route" in expected.lower(), "each eval must recommend named routes"
         assert "zero ERROR" in expected or "0 ERROR" in expected, (
             "each eval must require a clean check_page run"
+        )
+        assert "brand-kit" in expected.lower(), (
+            "each eval must state the brand-kit default or opt-out"
+        )
+        for aspect in ("composition", "type", "shape", "color"):
+            assert aspect in expected.lower(), (
+                f"each eval must require a visual difference in {aspect}"
+            )
+        assert "visual difference" in expected.lower(), (
+            "each eval must name the visual-difference requirement"
         )
 
     # The brief fixes the artifact set per scenario. The brand-kit is the proof
@@ -118,9 +133,19 @@ def evals_has_3_prompts(topics: tuple[str, ...] | list[str] = TOPICS) -> dict:
     expected_sets = {
         "vague pizzeria": {"manual.html", "onepage.html", "social.html"},
         "b2b consultancy": {"manual.html", "onepage.html", "deck.html", "report.html"},
-        "internal report": {"manual.html", "report.html"},
+        "brutalist record label": {"manual.html", "blank.html", "social.html"},
+        "luxury perfume": {"manual.html", "onepage.html", "deck.html"},
+        "kids science museum": {"manual.html", "onepage.html", "social.html"},
+        "internal dashboard": {"manual.html", "app.html"},
     }
-    template_formats = {"onepage.html", "deck.html", "report.html", "social.html", "app.html"}
+    template_formats = {
+        "onepage.html",
+        "deck.html",
+        "report.html",
+        "social.html",
+        "app.html",
+        "blank.html",
+    }
     for topic in topics:
         item = next(
             (
@@ -251,9 +276,9 @@ def fresh_generator_output_has_no_errors() -> list[str]:
     return evidence
 
 
-def test_evals_has_three_prompts() -> None:
-    data = evals_has_3_prompts()
-    assert len(data["evals"]) == 3
+def test_evals_has_six_scenarios() -> None:
+    data = evals_has_six_scenarios()
+    assert len(data["evals"]) == 6
 
 
 def test_readme_row_matches_skill_outputs() -> None:
@@ -272,7 +297,7 @@ def test_fresh_generator_output_has_zero_errors() -> None:
 def test_publish_gate() -> None:
     """The release gate: evals, README and authoring bar in one place."""
 
-    evals_has_3_prompts(list(TOPICS))
+    evals_has_six_scenarios(list(TOPICS))
     readme_row_matches_skill_outputs()
     skill_authoring_checklist_passes()
     fresh_generator_output_has_no_errors()
