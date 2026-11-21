@@ -76,7 +76,7 @@ This emits `theme.css` with `--b-*` variables and `tailwind-theme.css` with the 
 - **B:** monogram when C would break at small sizes.
 - **A:** wordmark alone when the symbol idea is too detailed.
 
-All variants share one grid and angle, use `currentColor`, stay legible at 16px, and keep a breathing area equal to the spacing unit `S`. Test on light and dark before showing the result. If the user pastes a detailed illustrative logo idea that cannot survive 16px, degrade to B or A and explain why.
+All variants share one grid and angle, use `currentColor`, stay legible at 16px, and keep a breathing area equal to the spacing unit `S`. Test on light and dark before showing the result. If the user pastes a detailed illustrative logo idea that cannot survive 16px, degrade to B or A and explain why. Use `references/logo.md` for construction, the 16px test and the fallback rules.
 
 ### Phase 3: Manual — the mandatory gate
 
