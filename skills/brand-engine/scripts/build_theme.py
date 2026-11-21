@@ -104,6 +104,7 @@ V1_TOP_LEVEL_KEYS: tuple[str, ...] = (
     "fonts",
     "scale",
     "unit",
+    "logo",
 )
 
 # Radius profiles: xs, sm, md, lg, xl (+ full). The defaults in the builder

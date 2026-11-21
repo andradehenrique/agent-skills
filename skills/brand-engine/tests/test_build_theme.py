@@ -179,6 +179,10 @@ def test_rejects_v1_leftovers() -> None:
         lambda d: d["design"].__setitem__("allowed_pairs", []),
         "allowed_pairs",
     )
+    expect_error(
+        lambda d: d.__setitem__("logo", {"variant": "C", "name": "Chama"}),
+        "logo",
+    )
 
 
 def test_type_defaults_when_omitted() -> None:
@@ -218,9 +222,9 @@ def test_rejects_duplicate_color_names() -> None:
 
 def test_rejects_duplicate_slugs() -> None:
     def mutate(data: dict[str, Any]) -> None:
-        data["design"]["colors"]["support"][0]["name"] = "Brasa"
+        data["design"]["colors"]["support"][0]["name"] = "Brasa!"
 
-    expect_error(mutate, "brasa")
+    expect_error(mutate, "same CSS token")
 
 
 # ---------------------------------------------------------------------------
