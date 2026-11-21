@@ -23,13 +23,15 @@
     <!--
       Cada slide é um container. Escreva mobile-first e use @5xl: para o palco
       1280×720. Ex.: text-2xl @5xl:text-5xl, grid @5xl:grid-cols-3.
+      Capa e números podem ir a @5xl:text-7xl ou @5xl:text-8xl; confira o
+      estouro do palco antes de entregar.
     -->
 
     <!-- deck:cover -->
     <section data-slide class="be-slide be-slide--band justify-between" aria-label="Capa">
       <p class="text-xs font-semibold uppercase tracking-widest text-band-accent @5xl:text-sm">[placeholder — contexto · área · data]</p>
       <div class="py-8 @5xl:py-0">
-        <h1 class="max-w-4xl text-3xl font-semibold tracking-tight @5xl:text-6xl">{{TITLE}}</h1>
+        <h1 class="max-w-4xl text-3xl font-semibold tracking-tight @5xl:text-7xl">{{TITLE}}</h1>
         <p class="mt-4 max-w-2xl text-lg text-on-band-muted @5xl:text-2xl">{{PURPOSE}}</p>
       </div>
       <p class="text-sm text-on-band-muted">[placeholder — quem apresenta · time]</p>
@@ -37,7 +39,7 @@
 
     <!-- deck:divider -->
     <section data-slide class="be-slide justify-center" aria-label="Divisor">
-      <p class="text-6xl font-semibold tabular-nums text-accent @5xl:text-6xl">01</p>
+      <p class="text-6xl font-semibold tabular-nums text-accent @5xl:text-8xl">01</p>
       <h2 class="mt-4 text-3xl font-semibold tracking-tight @5xl:text-6xl">[placeholder — nome do capítulo]</h2>
       <p class="mt-4 max-w-2xl text-fg-muted @5xl:text-xl">[placeholder — uma linha sobre o que vem.]</p>
     </section>

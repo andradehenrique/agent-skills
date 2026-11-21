@@ -93,11 +93,19 @@
         </table>
       </div>
 
-      <h3 class="mt-8 text-xl font-semibold">Gradiente</h3>
-      <div class="mt-3 flex flex-col gap-4 md:flex-row md:items-center">
-        <div class="be-swatch h-10 w-full bg-grad-brand md:w-1/2" role="img" aria-label="Gradiente de {{GRADIENT_FROM}} para {{GRADIENT_TO}} a 45 graus"></div>
-        <p class="max-w-md text-sm text-fg-muted">Exatamente dois stops 50/50 a 45°, de {{GRADIENT_FROM}} para {{GRADIENT_TO}}. É o único gradiente permitido; não acrescente terceira cor nem mude o ângulo.</p>
+      <h3 class="mt-8 text-xl font-semibold">Feedback</h3>
+      <p class="mt-2 max-w-3xl text-sm text-fg-muted">Feedback é estado, não decoração: sucesso, atenção, erro e informação. Cada par de fundo e texto foi derivado com contraste AA.</p>
+      <div class="mt-3 grid gap-3 sm:grid-cols-2 md:grid-cols-4">
+        {{FEEDBACK_CARDS}}
       </div>
+
+      <h3 class="mt-8 text-xl font-semibold">Gráficos</h3>
+      <p class="mt-2 max-w-3xl text-sm text-fg-muted">A série de dados usa a paleta de gráficos, com uma cor destacada e o restante em apoio. Rótulos diretos; tabela ou resumo textual quando o gráfico não for acessível.</p>
+      <div class="mt-3 flex flex-wrap gap-2">
+        {{CHART_SWATCHES}}
+      </div>
+
+      {{GRADIENT_SECTION}}
     </section>
 
     <section aria-labelledby="tipografia" class="border-t border-line pt-8">
@@ -135,8 +143,8 @@
 
     <section aria-labelledby="logo" class="border-t border-line pt-8">
       <h2 id="logo" class="text-2xl font-semibold tracking-tight md:text-3xl">Logo</h2>
-      <!-- logo: breathing area / área de respiro = altura S (var(--b-space-1), 8px) em todos os lados; nada entra nessa margem. -->
-      <p class="mt-2 max-w-3xl text-fg-muted">A área de respiro é igual à altura S ({{LOGO_BREATHING}}) em todos os lados. Uma cor via <code class="text-link">currentColor</code>, sem sombra, gradiente ou contorno.</p>
+      <!-- logo: breathing area / área de respiro = S (var(--b-space-1), 8px) em todos os lados; nada entra nessa margem. -->
+      <p class="mt-2 max-w-3xl text-fg-muted">A área de respiro é igual a S ({{LOGO_BREATHING}}) em todos os lados. Uma cor via <code class="text-link">currentColor</code>, sem sombra, gradiente ou contorno.</p>
 
       <div class="mt-6 grid gap-4 md:grid-cols-3">
         <div class="rounded-lg border border-line bg-surface p-4">
@@ -202,27 +210,59 @@
       </div>
     </section>
 
+    <section aria-labelledby="icones" class="border-t border-line pt-8">
+      <h2 id="icones" class="text-2xl font-semibold tracking-tight md:text-3xl">Ícones</h2>
+      <p class="mt-2 max-w-3xl text-fg-muted">A família e o peso vêm do brand.json; o equivalente semântico fica em <code class="text-link">assets/icons.json</code>. Um ícone usa <code class="text-link">currentColor</code>, herda o tamanho do texto e nunca é o único portador de significado.</p>
+      <div class="mt-6 grid gap-4 sm:grid-cols-2 md:grid-cols-4">
+        {{ICON_SAMPLES}}
+      </div>
+      <ul class="mt-3 list-disc space-y-1 pl-4 text-sm text-fg-muted">
+        <li>Decorativo: <code class="text-link">aria-hidden="true"</code>, sem nome duplicado no leitor de tela.</li>
+        <li>Com significado: <code class="text-link">aria-label</code> curto ou rótulo textual adjacente.</li>
+        <li>Legível a 16px; se precisar de detalhe, não é ícone.</li>
+        <li>Offline os ícones do CDN não renderizam; o rótulo textual precisa continuar fazendo sentido.</li>
+      </ul>
+    </section>
+
     <section aria-labelledby="imagem" class="border-t border-line pt-8">
-      <h2 id="imagem" class="text-2xl font-semibold tracking-tight md:text-3xl">Fotografia e ícones</h2>
+      <h2 id="imagem" class="text-2xl font-semibold tracking-tight md:text-3xl">Imagem</h2>
+      <p class="mt-2 max-w-3xl text-fg-muted">O tratamento deriva do território: {{TERRITORY}}. Pessoa e produto reais; nenhum banco de imagem sem direito de uso. Enquanto o asset real não existe, use <code class="text-link">placehold.co</code> e registre o placeholder na nota de entrega.</p>
+      <ul class="mt-3 list-disc space-y-1 pl-4 text-sm text-fg-muted">
+        <li>Luz natural ou uma fonte direcional; sem filtro que mude a cor da pele.</li>
+        <li>Contraste suficiente para texto sobreposto; se não houver, use faixa sólida.</li>
+        <li><code class="text-link">alt</code> descreve a intenção da imagem, não o arquivo.</li>
+      </ul>
+      <div class="mt-6">
+        {{IMAGE_SAMPLE}}
+      </div>
+    </section>
+
+    <section aria-labelledby="componentes" class="border-t border-line pt-8">
+      <h2 id="componentes" class="text-2xl font-semibold tracking-tight md:text-3xl">Componentes</h2>
+      <p class="mt-2 max-w-3xl text-fg-muted">Ações, campos, cartões, callouts, tabelas, KPIs e estados usam os mesmos tokens e a mesma hierarquia. O catálogo completo está em <code class="text-link">references/components.md</code>.</p>
       <div class="mt-6 grid gap-4 md:grid-cols-2">
-        <div class="rounded-lg border border-line bg-surface p-4">
-          <h3 class="text-lg font-semibold">Checklist de fotografia</h3>
-          <ul class="mt-3 list-disc space-y-1 pl-4 text-sm text-fg-muted">
-            <li>Luz natural ou uma fonte direcional; sem filtro que mude a cor da pele.</li>
-            <li>Enquadramento coerente com o território: {{TERRITORY}}</li>
-            <li>Pessoa e produto reais; nunca banco de imagem sem direito de uso.</li>
-            <li>Contraste suficiente para texto sobreposto; se não houver, use faixa sólida.</li>
-          </ul>
-        </div>
-        <div class="rounded-lg border border-line bg-surface p-4">
-          <h3 class="text-lg font-semibold">Checklist de ícones</h3>
-          <ul class="mt-3 list-disc space-y-1 pl-4 text-sm text-fg-muted">
-            <li>Traço de 1,75px, pontas arredondadas e grade de 24px.</li>
-            <li>Uma cor via currentColor; sem preenchimento decorativo.</li>
-            <li>Legível a 16px; se precisar de detalhe, não é ícone.</li>
-            <li>Sempre com nome acessível quando carrega significado.</li>
-          </ul>
-        </div>
+        {{COMPONENT_SAMPLES}}
+      </div>
+    </section>
+
+    <section aria-labelledby="composicao" class="border-t border-line pt-8">
+      <h2 id="composicao" class="text-2xl font-semibold tracking-tight md:text-3xl">Composição</h2>
+      <p class="mt-2 max-w-3xl text-fg-muted">Direção, medida e grid vêm do brand.json. O esqueleto é ponto de partida, não molde: mantenha a mensagem antes do layout e o ritmo vertical coerente.</p>
+      <div class="mt-6 grid gap-4 md:grid-cols-2">
+        {{COMPOSITION_RULES}}
+      </div>
+      <ul class="mt-4 list-disc space-y-1 pl-4 text-sm text-fg-muted">
+        <li>Um destaque por tela; proporção de cor estável entre seções.</li>
+        <li>Mobile-first: a versão estreita é a base, não uma redução.</li>
+        <li>Espaço em múltiplos da unidade; nada de valores soltos entre tokens.</li>
+      </ul>
+    </section>
+
+    <section aria-labelledby="aplicacoes" class="border-t border-line pt-8">
+      <h2 id="aplicacoes" class="text-2xl font-semibold tracking-tight md:text-3xl">Aplicações</h2>
+      <p class="mt-2 max-w-3xl text-fg-muted">As peças abaixo provam o sistema fora do manual. O brand-kit vivo reúne os mesmos componentes em light e dark.</p>
+      <div class="mt-6 grid gap-4 sm:grid-cols-2">
+        {{APPLICATION_CARDS}}
       </div>
     </section>
 
@@ -245,4 +285,6 @@
       <span>Manual gerado a partir de brand.json · [placeholder — versão e data]</span>
     </div>
   </footer>
+  {{ICONIFY_SCRIPT}}
+  {{CHART_SCRIPT}}
 </body>

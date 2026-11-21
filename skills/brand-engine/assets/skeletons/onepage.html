@@ -20,7 +20,10 @@
       <h1 id="hero-title" class="mt-2 max-w-3xl text-3xl font-semibold tracking-tight md:text-6xl">{{TITLE}}</h1>
       <p class="mt-3 max-w-2xl text-lg text-fg-muted md:text-xl">{{PURPOSE}}</p>
       <div class="mt-6 flex flex-wrap items-center gap-3">
-        <a href="#contato" class="inline-flex h-6 items-center rounded-md bg-primary px-3 text-sm font-semibold text-on-primary no-underline hover:bg-primary-hover">[placeholder — ação principal]</a>
+        <a href="#contato" class="inline-flex h-6 items-center gap-1 rounded-md bg-primary px-3 text-sm font-semibold text-on-primary no-underline hover:bg-primary-hover">
+          [placeholder — ação principal]
+          <iconify-icon icon="fluent:arrow-right-24-regular" aria-hidden="true" class="text-base"></iconify-icon>
+        </a>
         <a href="#como-funciona" class="inline-flex h-6 items-center rounded-md border border-line-input px-3 text-sm font-semibold text-fg no-underline hover:bg-surface-muted">[placeholder — ação secundária]</a>
       </div>
     </section>
@@ -29,6 +32,10 @@
     <section data-page="proof" aria-labelledby="prova" class="border-t border-line py-8 md:py-12">
       <h2 id="prova" class="text-2xl font-semibold tracking-tight md:text-3xl">Prova em números</h2>
       <p class="mt-2 max-w-2xl text-fg-muted">[placeholder — substitua por números verificados. Nada aqui foi inventado.]</p>
+      <div class="mt-4 flex items-start gap-2 rounded-lg bg-info-soft p-3 text-sm text-fg">
+        <iconify-icon icon="fluent:info-24-regular" aria-hidden="true" class="mt-0.5 text-base text-info"></iconify-icon>
+        <p>[placeholder — recorte, data da última atualização e fonte dos números.]</p>
+      </div>
       <dl class="mt-6 grid grid-cols-2 gap-x-4 gap-y-6 md:grid-cols-4">
         <div class="border-t-2 border-primary pt-2">
           <dt class="text-sm text-fg-muted">[placeholder — rótulo]</dt>
@@ -93,4 +100,5 @@
       <span>[placeholder — contato · cidade · dados legais]</span>
     </div>
   </footer>
+  {{ICONIFY_SCRIPT}}
 </body>
