@@ -89,8 +89,10 @@ display and body type with the scale equation and line-heights; logo
 construction, variants, breathing area and misuses; grid and spacing; icon
 style; imagery treatment; components; composition rules; applications; signature.
 
-- “NÃO SOMOS” is proposed from the route and attributes; the user confirms it at
-  the gate. There is no fixed antonym dictionary to copy.
+- “NÃO SOMOS” is proposed from the route and attributes; the generator seeds it
+  from a fixed attribute→antonym map and leaves unknown attributes as
+  `[placeholder — oposto de …]`; edit after generation. The user confirms it at
+  the gate.
 - The gradient section exists only when the brand defines a gradient.
 - The checker requires the misuse terms recolor/rotate/stretch/replace and a
   breathing-area comment.
@@ -196,8 +198,8 @@ for the context; **no product flavor** and no fake product name.
   modal focus trapping, labels on every control.
 - The layout is a starter: a settings page may drop stats and the chart; a
   dashboard may promote the trend. Keep the operational job and the states.
-- No decorative logo sprite in `app`; the lockup is inline in the topbar. The
-  checker accepts the format without the sprite and breathing-area comment.
+- `app` is exempt from the sprite/breathing-area checker rule; the generated page
+  still injects the sprite, and its visible lockup is inline in the topbar.
 
 ## blank — the shell
 

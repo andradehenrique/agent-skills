@@ -70,8 +70,9 @@ dark**, at 100% and 200% zoom. Render 16/24/48px samples before approving.
 - Standalone `logo.svg` gets `role="img"` and a `<title>` with the brand name.
   The inline sprite `<symbol id="be-mark">` stays presentational (no title) and
   is referenced with `<use href="#be-mark">`.
-- The sprite is the first element inside `<body>` in every generated page except
-  `app`; keep the id `be-mark` when you replace the placeholder path.
+- The sprite is the first element inside `<body>` in every generated page; `app`
+  is exempt from the sprite/breathing-area check and uses an inline topbar
+  lockup. Keep the id `be-mark` when you replace the placeholder path.
 - The wordmark uses the approved display stack (`--b-display`). In generated
   pages it is a `span`; in `logo.svg`, outline it or keep a live `text` with the
   same stack so it travels.

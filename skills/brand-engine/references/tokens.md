@@ -29,8 +29,8 @@ exits `2`, never a traceback.
 ## brand.json v2
 
 `version` must be `2`. The schema is final: there is no migrator, no dual parser
-and no compatibility mode. An older `brand.json` is rewritten by hand. Unknown
-keys are rejected instead of ignored, including old top-level keys.
+and no compatibility mode; rewrite older files by hand. Unknown keys inside known
+blocks and the v1 top-level keys are rejected; top-level metadata is ignored.
 
 | Key | Shape |
 |---|---|
