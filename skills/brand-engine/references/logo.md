@@ -8,8 +8,9 @@ the first variant that passes. `brand.json` records the result in
 The generator does not draw final geometry. `new_page.py` writes a placeholder
 `#be-mark` sprite and a lockup built from the chosen variant; replace the
 symbol's paths with the approved geometry and keep the id. The `app` format uses
-an inline lockup in the topbar and no sprite. Deliver the chosen logo as
-`logo.svg` in the working directory, never inside the skill.
+an inline lockup in the topbar; the generator still injects the shared sprite,
+but the checker exempts `app` from the sprite/breathing-area requirement. Deliver
+the chosen logo as `logo.svg` in the working directory, never inside the skill.
 
 ## Cascade
 
@@ -141,7 +142,8 @@ angle family, `currentColor`. That is C: symbol + “Omnia Labs” wordmark.
       brand fill (`bg-primary` + `text-on-primary` in HTML). No hex, gradient,
       shadow or filter.
 - [ ] `viewBox` square; `role`/`<title>` on standalone SVG; `#be-mark` kept in
-      the sprite (inline lockup in `app`).
+      the injected sprite. `app` is exempt from the sprite/breathing-area check
+      and uses an inline topbar lockup.
 - [ ] Breathing area S = `--b-space-1` (4px on unit 4, 8px on unit 8) on all
       sides.
 - [ ] Misuses documented: recolor, rotate, stretch, replace, shadow, low
