@@ -20,8 +20,11 @@ from __future__ import annotations
 import importlib.util
 import json
 import re
+import shutil
+import subprocess
 import sys
 import tempfile
+import textwrap
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -152,6 +155,126 @@ def test_brand_charts_reads_tokens() -> None:
         assert re.search(rf"\b{member}\s*:", source), (
             f"window.BrandCharts must expose {member}()"
         )
+
+
+BRAND_CHARTS_HARNESS = r"""
+const fs = require("fs");
+const vm = require("vm");
+
+const source = fs.readFileSync(process.argv[2], "utf8");
+const tokens = {
+  "--b-chart-1": "#101010",
+  "--b-chart-2": "#202020",
+  "--b-fg-subtle": "#666666",
+  "--b-line": "#dddddd",
+  "--b-surface": "#ffffff"
+};
+const canvases = { chart: { id: "chart" } };
+const created = [];
+
+function Chart(canvas, config) {
+  this.canvas = canvas;
+  this.config = config;
+  created.push(this);
+}
+Chart.prototype.destroy = function () {};
+
+const documentElement = {
+  getAttribute: function () { return "light"; },
+  setAttribute: function () {}
+};
+const sandbox = {
+  window: null,
+  document: {
+    documentElement: documentElement,
+    getElementById: function (id) { return canvases[id] || null; },
+    body: {}
+  },
+  MutationObserver: function (callback) { this.callback = callback; }
+};
+sandbox.MutationObserver.prototype.observe = function () {};
+sandbox.window = sandbox;
+sandbox.window.Chart = Chart;
+sandbox.window.MutationObserver = sandbox.MutationObserver;
+sandbox.window.getComputedStyle = function () {
+  return {
+    getPropertyValue: function (name) { return tokens[name] || ""; }
+  };
+};
+
+vm.createContext(sandbox);
+vm.runInContext(source, sandbox);
+
+const BrandCharts = sandbox.window.BrandCharts;
+if (!BrandCharts) throw new Error("BrandCharts was not exposed");
+
+function spec(options) {
+  return {
+    type: "bar",
+    data: { labels: ["a"], datasets: [{ data: [1] }] },
+    options: options
+  };
+}
+function lastConfig() {
+  return created[created.length - 1].config;
+}
+
+BrandCharts.create("chart", spec({ plugins: { legend: false, title: false } }));
+let cfg = lastConfig();
+if (cfg.options.plugins.legend !== false) {
+  throw new Error("legend:false was replaced with " + JSON.stringify(cfg.options.plugins.legend));
+}
+if (cfg.options.plugins.title !== false) {
+  throw new Error("title:false was replaced with " + JSON.stringify(cfg.options.plugins.title));
+}
+
+BrandCharts.create("chart", spec({ plugins: { legend: {}, title: {} } }));
+cfg = lastConfig();
+if (!cfg.options.plugins.legend || cfg.options.plugins.legend.labels.color !== "#666666") {
+  throw new Error("legend:{} did not receive the fg token: " + JSON.stringify(cfg.options.plugins.legend));
+}
+if (!cfg.options.plugins.title || cfg.options.plugins.title.color !== "#666666") {
+  throw new Error("title:{} did not receive the fg token: " + JSON.stringify(cfg.options.plugins.title));
+}
+
+BrandCharts.create("chart", spec({ scales: { x: { grid: false, ticks: false } } }));
+cfg = lastConfig();
+if (cfg.options.scales.x.grid !== false) {
+  throw new Error("grid:false was replaced with " + JSON.stringify(cfg.options.scales.x.grid));
+}
+if (cfg.options.scales.x.ticks !== false) {
+  throw new Error("ticks:false was replaced with " + JSON.stringify(cfg.options.scales.x.ticks));
+}
+
+console.log("ok");
+"""
+
+
+def test_brand_charts_preserves_disabled_plugins() -> None:
+    source = ASSETS / "brand-charts.js"
+    assert source.is_file(), "missing skills/brand-engine/assets/brand-charts.js"
+    node = shutil.which("node")
+    assert node, (
+        "node is required for the brand-charts behavioral test; install Node.js "
+        "so the harness can run rather than silently skipping"
+    )
+
+    with tempfile.TemporaryDirectory() as raw:
+        harness = Path(raw) / "brand_charts_harness.js"
+        harness.write_text(textwrap.dedent(BRAND_CHARTS_HARNESS), encoding="utf-8")
+        result = subprocess.run(
+            [node, str(harness), str(source)],
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
+
+    assert result.returncode == 0, (
+        "brand-charts harness failed:\n"
+        f"stdout: {result.stdout.strip()}\n"
+        f"stderr: {result.stderr.strip()}"
+    )
+    assert "ok" in result.stdout
 
 
 def test_axe_copy_creates_copy() -> None:

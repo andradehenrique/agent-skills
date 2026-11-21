@@ -135,37 +135,62 @@
     return painted;
   }
 
+  function isOptionsObject(value) {
+    return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+  }
+
+  function paintScalePart(scale, key, color) {
+    var part = scale[key];
+    if (part === false) {
+      return;   // keep `grid: false`, `ticks: false`, `border: false` disabled
+    }
+    var painted = isOptionsObject(part) ? copy(part) : {};
+    if (painted.color === undefined) {
+      painted.color = color;
+    }
+    scale[key] = painted;
+  }
+
   function paintScale(scale, palette) {
-    var painted = copy(scale) || {};
-    painted.grid = copy(painted.grid) || {};
-    if (painted.grid.color === undefined) {
-      painted.grid.color = palette.line;
+    if (scale === false) {
+      return false;
     }
-    painted.ticks = copy(painted.ticks) || {};
-    if (painted.ticks.color === undefined) {
-      painted.ticks.color = palette.fg;
+    var painted = isOptionsObject(scale) ? copy(scale) : {};
+    paintScalePart(painted, "grid", palette.line);
+    paintScalePart(painted, "ticks", palette.fg);
+    paintScalePart(painted, "border", palette.line);
+    return painted;
+  }
+
+  function paintLegend(legend, palette) {
+    if (legend === false) {
+      return false;   // the author disabled the legend; do not re-enable it
     }
-    painted.border = copy(painted.border) || {};
-    if (painted.border.color === undefined) {
-      painted.border.color = palette.line;
+    var painted = isOptionsObject(legend) ? copy(legend) : {};
+    painted.labels = isOptionsObject(painted.labels) ? copy(painted.labels) : {};
+    if (painted.labels.color === undefined) {
+      painted.labels.color = palette.fg;
+    }
+    return painted;
+  }
+
+  function paintTitle(title, palette) {
+    if (title === false) {
+      return false;   // the author disabled the title; do not re-enable it
+    }
+    var painted = isOptionsObject(title) ? copy(title) : {};
+    if (painted.color === undefined) {
+      painted.color = palette.fg;
     }
     return painted;
   }
 
   function paintOptions(options, palette, type) {
-    var painted = copy(options) || {};
-    painted.plugins = copy(painted.plugins) || {};
+    var painted = isOptionsObject(options) ? copy(options) : {};
+    painted.plugins = isOptionsObject(painted.plugins) ? copy(painted.plugins) : {};
 
-    painted.plugins.legend = copy(painted.plugins.legend) || {};
-    painted.plugins.legend.labels = copy(painted.plugins.legend.labels) || {};
-    if (painted.plugins.legend.labels.color === undefined) {
-      painted.plugins.legend.labels.color = palette.fg;
-    }
-
-    painted.plugins.title = copy(painted.plugins.title) || {};
-    if (painted.plugins.title.color === undefined) {
-      painted.plugins.title.color = palette.fg;
-    }
+    painted.plugins.legend = paintLegend(painted.plugins.legend, palette);
+    painted.plugins.title = paintTitle(painted.plugins.title, palette);
 
     if (isCircular(type)) {
       return painted;
