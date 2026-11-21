@@ -32,8 +32,10 @@ FIXTURES = Path(__file__).resolve().parent / "fixtures"
 sys.path.insert(0, str(SCRIPTS))
 
 try:  # RED phase: the v2 generator may not be importable yet.
+    import check_page as checking
     import new_page as npg
 except ImportError as exc:  # pragma: no cover - only on the first red run
+    checking = None  # type: ignore[assignment]
     npg = None  # type: ignore[assignment]
     IMPORT_ERROR = exc
 else:
@@ -56,6 +58,11 @@ def generator():
     return npg
 
 
+def checker():
+    assert checking is not None, f"check_page not importable ({IMPORT_ERROR})"
+    return checking
+
+
 def brand(fixture: str) -> dict:
     return generator().load_brand(FIXTURES / f"{fixture}.brand.json")
 
@@ -69,6 +76,12 @@ def generate(fmt: str, out: str | Path, **kwargs: object) -> str:
     path = mod.new_page(fmt, FIXTURES / "forno-e-brasa.brand.json", "Forno & Brasa", out, **kwargs)
     assert isinstance(path, Path), f"new_page must return a path, got {type(path)}"
     return path.read_text(encoding="utf-8")
+
+
+def html_start_tag(html: str) -> str:
+    match = re.search(r"<html\b[^>]*>", html)
+    assert match, "page has no <html> start tag"
+    return match.group(0)
 
 
 def headings(html: str) -> list[str]:
@@ -98,17 +111,49 @@ def test_render_every_format() -> None:
         assert "prefers-color-scheme" in html, fmt
 
 
+def test_all_formats_pass_checker() -> None:
+    for fmt in EXPECTED_FORMATS:
+        findings = checker().check_html(render(fmt))
+        errors = [item for item in findings if item.startswith("ERROR")]
+        assert not errors, f"{fmt} has checker errors: {errors}"
+
+
+def test_icon_family_applied() -> None:
+    mod = generator()
+    # The `luxury` fixture uses design.icons.family "phosphor".
+    data = brand("luxury")
+    assert data["design"]["icons"]["family"] == "phosphor"
+
+    for fmt in EXPECTED_FORMATS:
+        html = render(fmt, fixture="luxury")
+        assert 'icon="fluent:' not in html, f"{fmt} still renders Fluent icon names"
+
+    for fmt in ("manual", "onepage", "report", "app", "brand-kit"):
+        assert 'icon="ph:' in render(fmt, fixture="luxury"), (
+            f"{fmt} must use the brand's phosphor icon names"
+        )
+
+    # Unknown Fluent names are left untouched instead of guessed.
+    markup = '<iconify-icon icon="fluent:not-in-the-map"></iconify-icon>'
+    assert mod._resolve_icon_family(markup, data) == markup
+
+
 def test_format_scripts_are_conditional() -> None:
     report = render("report")
-    assert "chart.umd" in report, "report must load Chart.js"
+    assert "cdn.jsdelivr.net/npm/chart.js" in report, "report must load the Chart.js CDN"
+    assert "chart.umd" in report, "report must load the Chart.js UMD build"
     assert "BrandCharts" in report, "report must load the BrandCharts helper"
 
     onepage = render("onepage")
     assert "chart.umd" not in onepage, "onepage has no chart and must not load Chart.js"
     assert "BrandCharts" not in onepage
 
+    # The shared base CSS contains a bare `iconify-icon` selector, so only the
+    # CDN URL proves the script was injected for this format.
     for fmt in ("onepage", "app", "brand-kit", "manual", "report"):
-        assert "iconify-icon" in render(fmt), f"{fmt} uses Iconify icons"
+        assert "cdn.jsdelivr.net/npm/iconify-icon" in render(fmt), (
+            f"{fmt} uses Iconify icons and must load the CDN"
+        )
 
     blank = render("blank")
     assert "chart.umd" not in blank
@@ -138,8 +183,8 @@ def test_placehold_theme_swap() -> None:
     html = render("brand-kit")
     assert "data-placehold-dark" in html
     assert "data-placehold-light" in html
-    assert "img[data-placehold-dark]" in generator().THEME_JS, (
-        "THEME_JS must swap img[data-placehold-dark] on theme change"
+    assert "img[data-placehold-dark]" in html, (
+        "the rendered page's theme script must swap img[data-placehold-dark]"
     )
 
     light_only = render("brand-kit", fixture="brutalist")
@@ -155,9 +200,10 @@ def test_theme_modes() -> None:
     mod = generator()
 
     dark_only = render("blank", fixture="luxury")
-    assert 'data-theme-default="dark"' in dark_only
-    assert 'data-theme="dark"' in dark_only
-    assert 'data-theme-lock="dark"' in dark_only
+    start = html_start_tag(dark_only)
+    assert 'data-theme-default="dark"' in start
+    assert 'data-theme="dark"' in start
+    assert 'data-theme-lock="dark"' in start
     # The shared bare CSS mentions [data-theme-toggle]; the button is what is gone.
     assert "data-theme-toggle aria-label" not in dark_only
     assert 'd === "dark" ? "dark" : "light"' in dark_only
@@ -192,8 +238,9 @@ def test_theme_default_dark_applies_dark() -> None:
     data["design"]["theme"]["default"] = "dark"
 
     html = generator().render_page("blank", data, "Forno & Brasa", None)
-    assert 'data-theme-default="dark"' in html
-    assert 'data-theme="dark"' in html
+    start = html_start_tag(html)
+    assert 'data-theme-default="dark"' in start
+    assert 'data-theme="dark"' in start
 
 
 # ---------------------------------------------------------------------------

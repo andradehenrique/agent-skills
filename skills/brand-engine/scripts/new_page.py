@@ -370,7 +370,39 @@ def _icons_doc() -> dict:
 def _icon_name(brand: dict, semantic: str) -> str:
     family = brand["design"]["icons"]["family"]
     entry = _icons_doc()["icons"].get(semantic, {})
-    return entry.get(family) or entry.get("fluent") or f"{family}:{semantic}"
+    # Never fall back to another family: unresolved is better than the wrong set.
+    return entry.get(family) or f"{family}:{semantic}"
+
+
+def _resolve_icon_family(markup: str, brand: dict) -> str:
+    """Rewrite the skeletons' Fluent icon names to the brand's icon family.
+
+    Skeletons use Fluent names as the neutral default. ``assets/icons.json``
+    maps each semantic key to every supported family, so the reverse lookup
+    translates only names the map knows; unknown names stay unchanged.
+    """
+
+    family = brand["design"]["icons"]["family"]
+    if family == "fluent":
+        return markup
+
+    reverse: dict[str, str] = {}
+    for semantic, names in _icons_doc()["icons"].items():
+        fluent = names.get("fluent")
+        if fluent and fluent not in reverse:
+            reverse[fluent] = semantic
+
+    def replace(match: re.Match[str]) -> str:
+        value = match.group(2)
+        semantic = reverse.get(value)
+        if semantic is None:
+            return match.group(0)
+        target = _icons_doc()["icons"][semantic].get(family)
+        if not target:
+            return match.group(0)
+        return match.group(1) + target + match.group(3)
+
+    return re.sub(r'(icon=")([^"]+)(")', replace, markup)
 
 
 def _font_families(brand: dict) -> list[str]:
@@ -997,6 +1029,7 @@ def render_page(fmt: str, brand: dict, title: str, theme: str | None = None) -> 
     body = _read(f"skeletons/{fmt}.html")
     for key, value in mapping.items():
         body = body.replace("{{" + key + "}}", value)
+    body = _resolve_icon_family(body, brand)
 
     if "<body" not in body:
         raise RuntimeError(f"skeleton {fmt}.html has no <body>")
