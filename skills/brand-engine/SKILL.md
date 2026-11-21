@@ -49,7 +49,7 @@ The skill is flexible by design: the route carries the visual system (color role
 
 - **Recommended first.** Propose 2–3 routes and mark exactly one as recommended, with the "why" in one line. The same applies to formats: propose the 2–3 that fit the context.
 - **Granularity on demand.** The default flow does not ask about radius, spacing, scale, icon family or chart colors. If the user asks ("quero ajustar o radius"), open the control and record the choice in `brand.json`.
-- **Post-delivery adjustments.** `brand.json` is the state. "Ajusta X" regenerates theme, manual and brand-kit and revalidates, without restarting discovery.
+- **Post-delivery adjustments.** `brand.json` is the state. "Ajusta X" regenerates the theme, the manual, the brand-kit and the delivered formats, then revalidates, without restarting discovery.
 - **The delivery note lists assumptions and placeholders.** The user sees what the skill decided for them and what is still missing.
 
 ## Execution Flow
