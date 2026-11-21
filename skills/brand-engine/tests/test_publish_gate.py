@@ -1,14 +1,14 @@
-"""Publication gate for the brand-engine skill.
+"""Publication gate for the brand-engine v2 skill.
 
 The gate is the release contract: the evals exist and describe the three
 canonical jobs, the README row mirrors what ``SKILL.md`` promises (including
 when not to use it), the repository authoring checklist holds, and a fresh run
-of the generator for every format still passes ``check_page.py`` with zero
-ERROR.
+of the generator for every one of the eight formats still passes
+``check_page.py`` with zero ERROR.
 
-Run with pytest (``python3 -m pytest skills/brand-engine/tests/test_publish_gate.py``)
-or directly with Python when pytest is unavailable
-(``python3 skills/brand-engine/tests/test_publish_gate.py``).
+Run with the stdlib runner:
+
+    python3 skills/brand-engine/tests/test_publish_gate.py
 """
 
 from __future__ import annotations
@@ -26,7 +26,17 @@ EVALS = ROOT / "evals" / "evals.json"
 README = ROOT.parents[1] / "README.md"
 SCRIPTS = ROOT / "scripts"
 SAMPLE_BRAND = Path(__file__).resolve().parent / "fixtures" / "forno-e-brasa.brand.json"
-FORMATS = ("manual", "onepage", "deck", "report", "social", "blank")
+
+FORMATS = (
+    "manual",
+    "brand-kit",
+    "onepage",
+    "report",
+    "deck",
+    "social",
+    "app",
+    "blank",
+)
 TOPICS = ("vague pizzeria", "b2b consultancy", "internal report")
 
 sys.path.insert(0, str(SCRIPTS))
@@ -103,14 +113,14 @@ def evals_has_3_prompts(topics: tuple[str, ...] | list[str] = TOPICS) -> dict:
             "each eval must require a clean check_page run"
         )
 
-    # The brief fixes the template set per scenario: pizzeria -> landing+social,
-    # consultancy -> landing+deck+report, internal report -> report only.
-    template_formats = {"manual.html", "onepage.html", "deck.html", "report.html", "social.html"}
+    # The brief fixes the artifact set per scenario. The brand-kit is the proof
+    # of the system, not one of the 2-3 formats, so it is not asserted here.
     expected_sets = {
         "vague pizzeria": {"manual.html", "onepage.html", "social.html"},
         "b2b consultancy": {"manual.html", "onepage.html", "deck.html", "report.html"},
         "internal report": {"manual.html", "report.html"},
     }
+    template_formats = {"onepage.html", "deck.html", "report.html", "social.html", "app.html"}
     for topic in topics:
         item = next(
             (
@@ -144,15 +154,13 @@ def readme_row() -> str:
 def readme_row_matches_skill_outputs() -> str:
     row = readme_row()
     skill = skill_text()
+    lowered = row.lower()
 
-    # The row must mirror the shipped formats and the trigger vocabulary.
+    # The row must mirror the shipped formats and the v2 integration story.
     for term in ("brand", "manual", "landing", "deck", "report", "social"):
-        assert term in row.lower(), f"README row must mention {term}"
-    for term in ("vague", "logo", "reference screenshots"):
-        assert term in row.lower(), f"README row must mirror the {term} trigger"
-    assert "iterative" in row.lower(), (
-        "README must state the iterative behavior of the multi-step skill"
-    )
+        assert term in lowered, f"README row must mention {term}"
+    for term in ("flexible", "tailwind", "iconify", "chart.js", "placehold", "app", "brand-kit"):
+        assert term in lowered, f"README row must mention {term}"
 
     # When not to use must match the SKILL.md boundaries.
     assert "Not for" in row, "README row must state when not to use the skill"
@@ -161,8 +169,11 @@ def readme_row_matches_skill_outputs() -> str:
         assert term in skill, f"README row claims {term} but SKILL.md does not"
 
     # Every format the row advertises is a real generated format.
-    for fmt in ("manual", "onepage", "deck", "report", "social"):
-        assert fmt in skill, f"README advertises {fmt} but SKILL.md does not output it"
+    for fmt in FORMATS:
+        assert fmt in skill, f"README row advertises {fmt} but SKILL.md does not output it"
+
+    for retired in ("v1", "--flavor", "data-flavor", "product flavor", "gupy"):
+        assert retired not in lowered, f"README row still advertises {retired!r}"
     return row
 
 
@@ -173,6 +184,9 @@ def skill_authoring_checklist_passes() -> None:
     assert meta.get("name") == "brand-engine", "frontmatter name must be brand-engine"
     assert meta.get("description", "").startswith("Use when"), (
         "description must start with 'Use when'"
+    )
+    assert re.search(r'(?m)^\s*version:\s*["\']?0\.2\.0["\']?\s*$', skill), (
+        "frontmatter version must be 0.2.0"
     )
     assert len(skill.splitlines()) < 500, "SKILL.md must stay under 500 lines"
 
@@ -197,6 +211,14 @@ def skill_authoring_checklist_passes() -> None:
         "missing the manual approval loop"
     )
     assert "Do not use this skill for" in skill, "missing the Boundaries list"
+
+    # v2 contract: eight formats, the online dependencies, no v1 or flavor.
+    for fmt in FORMATS:
+        assert fmt in skill, f"SKILL.md must document the {fmt} format"
+    for fragment in ("Tailwind v4", "Iconify", "Chart.js", "placehold.co"):
+        assert fragment in skill, f"SKILL.md must document {fragment}"
+    for retired in ("--flavor", "data-flavor", "gc-", "gupy"):
+        assert retired not in skill.lower(), f"SKILL.md still mentions {retired!r}"
 
 
 def fresh_generator_output_has_no_errors() -> list[str]:
