@@ -1,0 +1,35 @@
+{
+  "$schema": "https://brand-engine.local/brand.schema.json",
+  "version": 1,
+  "name": "Forno & Brasa",
+  "purpose": "Levar pizza de fermentação longa e assada na lenha para a mesa de bairro, sem cerimônia.",
+  "persona": "Famílias e casais de 25 a 45 anos que pedem pizza no fim de semana e valorizam massa artesanal.",
+  "territory": "Rústico contemporâneo: barro, fogo e madeira, com acabamento limpo.",
+  "archetype": "O Criador",
+  "attributes": ["rústico", "caloroso", "direto", "artesanal"],
+  "colors": {
+    "primary": [
+      {"name": "Brasa", "hex": "#A6402F", "note": "ação e assinatura"},
+      {"name": "Terracota", "hex": "#C97B4A", "note": "apoio quente"}
+    ],
+    "secondary": [
+      {"name": "Oliva", "hex": "#5F6B45", "note": "frescor e contraste"},
+      {"name": "Creme", "hex": "#F4E9D8", "note": "superfície clara"}
+    ]
+  },
+  "allowed_pairs": [
+    {"bg": "Brasa", "fg": "Creme", "use": "CTA e faixa de marca"},
+    {"bg": "Creme", "fg": "Brasa", "use": "texto sobre superfície clara"},
+    {"bg": "Oliva", "fg": "Creme", "use": "selo e rodapé"},
+    {"bg": "Creme", "fg": "Oliva", "use": "apoio sobre superfície clara"}
+  ],
+  "gradient": {"from": "Brasa", "to": "Terracota", "angle": 45},
+  "fonts": {
+    "display": {"family": "Fraunces", "fallback": "Georgia, serif"},
+    "body": {"family": "Source Sans 3", "fallback": "system-ui, sans-serif"}
+  },
+  "scale": {"base": 16, "ratio": 1.25},
+  "unit": 8,
+  "logo": {"variant": "C", "name": "Chama", "notes": "Duas formas geométricas: chama e arco de forno."},
+  "aceite": false
+}

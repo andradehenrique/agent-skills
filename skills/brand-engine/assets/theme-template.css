@@ -1,0 +1,55 @@
+{{BRAND_HEADER}}
+
+{{BRAND_TOKENS}}
+
+/* --------------------------------------------------------------------------
+   Base layer: semantic elements read correctly before utilities are applied.
+   Content still uses semantic utilities; this is the floor, not a palette.
+   -------------------------------------------------------------------------- */
+@layer base {
+  *, *::before, *::after { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+  body {
+    margin: 0;
+    background: var(--b-canvas);
+    color: var(--b-fg);
+    font-family: var(--b-body);
+    font-size: var(--b-text-base);
+    line-height: var(--b-leading-base);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+  h1, h2, h3, h4 {
+    margin: 0 0 var(--b-space-2);
+    font-family: var(--b-display);
+    font-weight: 600;
+    text-wrap: balance;
+  }
+  h1 { font-size: var(--b-text-4xl); line-height: var(--b-leading-4xl); }
+  h2 { font-size: var(--b-text-2xl); line-height: var(--b-leading-2xl); }
+  h3 { font-size: var(--b-text-xl); line-height: var(--b-leading-xl); }
+  h4 { font-size: var(--b-text-lg); line-height: var(--b-leading-lg); }
+  p { margin: 0 0 var(--b-space-2); text-wrap: pretty; }
+  a { color: var(--b-link); text-decoration: underline; text-underline-offset: 3px; }
+  img, svg { max-width: 100%; }
+  :focus-visible {
+    outline: 2px solid var(--b-focus);
+    outline-offset: 2px;
+    border-radius: var(--b-radius-sm);
+  }
+  ::selection { background: var(--b-highlight); color: var(--b-on-highlight); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    transition: none !important;
+    animation: none !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+@media print {
+  body { background: var(--b-surface); color: var(--b-fg); }
+  * { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+  section, article { break-inside: avoid; }
+}
