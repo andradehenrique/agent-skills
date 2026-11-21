@@ -59,12 +59,14 @@ traceback: callers use :func:`resolve_brand_path` and
 
 from __future__ import annotations
 
+import argparse
 import json
 import re
+import sys
 import unicodedata
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Any, Iterable, NamedTuple
 
 # ---------------------------------------------------------------------------
 # Contract constants
@@ -137,11 +139,110 @@ DEFAULT_COMPOSITION: dict[str, Any] = {
 DEFAULT_LOGO: dict[str, str] = {"variant": "C", "name": "", "notes": ""}
 DEFAULT_VOICE_SUMMARY = "[placeholder — resumo da voz]"
 
+THEME_FILE = "theme.css"
+TAILWIND_FILE = "tailwind-theme.css"
+
+ASSETS_DIR = Path(__file__).resolve().parent.parent / "assets"
+TEMPLATE_FILE = ASSETS_DIR / "theme-template.css"
+
+# Twelve steps: xs..8xl. 4xl/5xl cover hero and deck headlines. The size is
+# ``base * ratio**exponent``; leading shrinks as the size grows (floor 1.05).
+TYPE_STEPS: tuple[tuple[str, int], ...] = (
+    ("xs", -2),
+    ("sm", -1),
+    ("base", 0),
+    ("lg", 1),
+    ("xl", 2),
+    ("2xl", 3),
+    ("3xl", 4),
+    ("4xl", 5),
+    ("5xl", 6),
+    ("6xl", 7),
+    ("7xl", 8),
+    ("8xl", 9),
+)
+
+# Feedback anchors: functional hues that are readable on light surfaces. Every
+# token derived from them is re-checked against the brand surfaces.
+FEEDBACK_ANCHORS: dict[str, str] = {
+    "success": "#1E7A3C",
+    "warning": "#B26A00",
+    "danger": "#B3261E",
+    "info": "#0B6E99",
+}
+
+# Chart anchors: eight distinguishable hues (data, not text; 3:1 vs surface).
+CHART_ANCHORS: tuple[str, ...] = (
+    "#0B6E99",
+    "#B26A00",
+    "#1E7A3C",
+    "#B3261E",
+    "#6A4C93",
+    "#0F7C7B",
+    "#8A5A2B",
+    "#4B6A88",
+)
+
+SHADOW_SCALES: dict[str, tuple[str, str, str]] = {
+    "none": ("none", "none", "none"),
+    "soft": (
+        "0 1px 2px rgba(0, 0, 0, 0.06), 0 1px 3px rgba(0, 0, 0, 0.08)",
+        "0 4px 8px rgba(0, 0, 0, 0.08), 0 2px 4px rgba(0, 0, 0, 0.06)",
+        "0 12px 24px rgba(0, 0, 0, 0.12), 0 4px 8px rgba(0, 0, 0, 0.08)",
+    ),
+    "strong": (
+        "0 1px 2px rgba(0, 0, 0, 0.16), 0 2px 4px rgba(0, 0, 0, 0.14)",
+        "0 6px 12px rgba(0, 0, 0, 0.18), 0 3px 6px rgba(0, 0, 0, 0.12)",
+        "0 16px 32px rgba(0, 0, 0, 0.22), 0 6px 12px rgba(0, 0, 0, 0.14)",
+    ),
+}
+
+SEMANTIC_COLOR_KEYS: tuple[str, ...] = (
+    "canvas",
+    "surface",
+    "surface-muted",
+    "surface-raised",
+    "band",
+    "on-band",
+    "on-band-muted",
+    "band-accent",
+    "fg",
+    "fg-muted",
+    "fg-subtle",
+    "fg-disabled",
+    "line",
+    "line-strong",
+    "line-input",
+    "primary",
+    "primary-hover",
+    "on-primary",
+    "primary-soft",
+    "on-primary-soft",
+    "accent",
+    "accent-soft",
+    "on-accent",
+    "link",
+    "focus",
+    "highlight",
+    "on-highlight",
+) + tuple(
+    key
+    for role in FEEDBACK_ROLES
+    for key in (role, f"{role}-soft", f"{role}-solid", f"on-{role}", f"on-{role}-soft")
+) + tuple(f"chart-{index}" for index in range(1, 9))
+
 _HEX_RE = re.compile(r"^#[0-9a-fA-F]{6}$")
 
 
 class BrandError(ValueError):
     """A malformed or incomplete brand.json, or an unusable --brand path."""
+
+
+class ThemeBuild(NamedTuple):
+    """The two generated stylesheets (also written to ``out_dir``)."""
+
+    theme_css: str
+    tailwind_theme_css: str
 
 
 @dataclass(frozen=True)
@@ -901,6 +1002,434 @@ def _build_model(brand: Any) -> _Model:
 
 
 # ---------------------------------------------------------------------------
+# Semantic tokens
+# ---------------------------------------------------------------------------
+
+
+def _role_hex(model: _Model, role: str) -> str:
+    """Return the approved hex for a colour role (accent falls back to primary)."""
+
+    for color in model.colors:
+        if color.role == role:
+            return color.hex
+    if role == "accent":
+        return _role_hex(model, "primary")
+    raise RuntimeError(f"brand model has no {role!r} colour role")
+
+
+def _type_steps(model: _Model) -> tuple[tuple[str, int, float], ...]:
+    base, ratio = model.scale
+    steps: list[tuple[str, int, float]] = []
+    for name, exponent in TYPE_STEPS:
+        size = int(round(base * (ratio**exponent)))
+        if exponent <= 0:
+            leading = 1.6
+        else:
+            leading = max(1.05, 1.6 - 0.07 * exponent)
+        steps.append((name, size, round(leading, 2)))
+    return tuple(steps)
+
+
+def _gradient_css(gradient: dict[str, Any]) -> str:
+    stops = [f"{gradient['from']} 0%"]
+    if gradient.get("via"):
+        stops.append(f"{gradient['via']} 50%")
+    stops.append(f"{gradient['to']} 100%")
+    return f"linear-gradient({gradient['angle']:g}deg, {', '.join(stops)})"
+
+
+def _mode_surfaces(model: _Model, mode: str) -> tuple[str, str, str]:
+    """Return ``(canvas, surface, fg_seed)`` for a mode.
+
+    The approved canvas/surface are role colours, not per-mode values: a light
+    brand that enables dark (and vice versa) would otherwise get an identical
+    dark block. When the approved surface sits on the wrong side of the mode,
+    derive the opposite paper from ``ink``/``primary`` instead.
+    """
+
+    canvas_approved = _role_hex(model, "canvas")
+    surface_approved = _role_hex(model, "surface")
+    ink = _role_hex(model, "ink")
+    primary = _role_hex(model, "primary")
+
+    if mode == "light":
+        canvas = (
+            canvas_approved
+            if relative_luminance(canvas_approved) >= 0.5
+            else mix("#FFFFFF", ink, 0.04)
+        )
+        surface = (
+            surface_approved
+            if relative_luminance(surface_approved) >= 0.5
+            else mix(canvas, "#FFFFFF", 0.5)
+        )
+        fg_seed = ink if relative_luminance(ink) < 0.5 else mix("#141110", ink, 0.08)
+    else:
+        canvas = (
+            canvas_approved
+            if relative_luminance(canvas_approved) < 0.2
+            else mix(ink, primary, 0.06)
+        )
+        surface = (
+            surface_approved
+            if relative_luminance(surface_approved) < 0.2
+            else mix(canvas, "#FFFFFF", 0.05)
+        )
+        fg_seed = (
+            ink
+            if relative_luminance(ink) >= 0.5
+            else mix("#FFFFFF", canvas_approved, 0.06)
+        )
+
+    return canvas, surface, fg_seed
+
+
+def _chart_tokens(model: _Model, mode: str, surface: str) -> dict[str, str]:
+    """Eight chart colours that clear 3:1 against ``surface``, unique and stable."""
+
+    primary = _role_hex(model, "primary")
+    anchors = model.charts if isinstance(model.charts, tuple) else CHART_ANCHORS
+
+    shift_target = "#000000" if mode == "light" else "#FFFFFF"
+    bases: list[str] = []
+    variants: list[list[str]] = []
+    for anchor in anchors:
+        base = (
+            mix(anchor, primary, 0.10)
+            if mode == "light"
+            else mix(anchor, "#FFFFFF", 0.15)
+        )
+        bases.append(_ensure_contrast_all(base, (surface,), 3.0))
+        variants.append(
+            [
+                _ensure_contrast_all(mix(base, shift_target, step * 0.06), (surface,), 3.0)
+                for step in range(1, 9)
+            ]
+        )
+
+    # One base hue per anchor first, so eight brands of colour survive; shifted
+    # variants only fill the gaps left by contrast collisions.
+    candidates = bases + [candidate for group in variants for candidate in group]
+
+    unique: list[str] = []
+    for candidate in candidates:
+        if candidate not in unique:
+            unique.append(candidate)
+        if len(unique) == 8:
+            break
+
+    # Deterministic grayscale fallback for pathological palettes.
+    for step in range(0, 21):
+        if len(unique) == 8:
+            break
+        grey = mix("#808080", "#000000" if mode == "light" else "#FFFFFF", step / 20)
+        candidate = _ensure_contrast_all(grey, (surface,), 3.0)
+        if candidate not in unique:
+            unique.append(candidate)
+
+    if len(unique) != 8:
+        raise RuntimeError("could not derive eight unique chart colours")
+
+    return {f"chart-{index}": value for index, value in enumerate(unique, start=1)}
+
+
+def _semantic_tokens(model: _Model, mode: str) -> dict[str, str]:
+    """Full semantic colour set for one mode.
+
+    Surfaces keep the approved canvas/surface hex; text, action, accent,
+    feedback and chart tokens may shift to meet WCAG contrast.
+    """
+
+    if mode not in THEME_MODES:
+        raise ValueError(f"unknown theme mode: {mode}")
+
+    ink = _role_hex(model, "ink")
+    primary_source = _role_hex(model, "primary")
+    accent_source = _role_hex(model, "accent")
+    canvas, surface, fg_seed = _mode_surfaces(model, mode)
+
+    light = mode == "light"
+    surface_muted = mix(surface, canvas, 0.55)
+    if light:
+        surface_raised = surface
+        band_seed = ink if relative_luminance(ink) < 0.18 else "#141110"
+        band = mix(band_seed, primary_source, 0.38)
+        highlight = mix(surface, accent_source, 0.22)
+        primary_soft = mix(canvas, primary_source, 0.14)
+        accent_soft = mix(canvas, accent_source, 0.14)
+        feedback_soft = 0.14
+    else:
+        surface_raised = mix(surface, "#FFFFFF", 0.04)
+        band_seed = ink if relative_luminance(ink) < 0.18 else "#0B0A09"
+        band = mix(band_seed, primary_source, 0.30)
+        highlight = mix(canvas, accent_source, 0.38)
+        primary_soft = mix(canvas, primary_source, 0.24)
+        accent_soft = mix(canvas, accent_source, 0.24)
+        feedback_soft = 0.24
+
+    fg = _ensure_contrast_all(fg_seed, (canvas, surface), 7.0)
+    on_highlight = ensure_contrast(fg_seed if light else "#FFFFFF", highlight, 4.5)
+
+    primary = ensure_contrast(primary_source, canvas, 3.0)
+    on_primary = _on_color(primary)
+    primary_hover = mix(primary, "#000000" if light else "#FFFFFF", 0.12)
+    # The hover fill must keep the same on-primary readable (no contrast dip).
+    primary_hover = ensure_background_contrast(on_primary, primary_hover, 4.5)
+    on_primary_soft = ensure_contrast(primary_source, primary_soft, 4.5)
+
+    accent = _ensure_contrast_all(accent_source, (surface, canvas), 4.5)
+    on_accent = _on_color(accent)
+    link = _ensure_contrast_all(primary_source, (surface, canvas), 4.5)
+    focus = _ensure_contrast_all(accent_source, (surface, canvas), 3.0)
+
+    on_band = _on_color(band)
+    on_band_muted = ensure_contrast(mix(on_band, band, 0.25), band, 4.5)
+    band_accent = _first_with_contrast((accent, highlight, "#FFFFFF"), band, 4.5)
+
+    tokens: dict[str, str] = {
+        "canvas": canvas,
+        "surface": surface,
+        "surface-muted": surface_muted,
+        "surface-raised": surface_raised,
+        "band": band,
+        "on-band": on_band,
+        "on-band-muted": on_band_muted,
+        "band-accent": band_accent,
+        "fg": fg,
+        "fg-muted": _ensure_contrast_all(mix(fg, canvas, 0.30), (canvas, surface), 4.5),
+        "fg-subtle": _ensure_contrast_all(mix(fg, canvas, 0.42), (canvas, surface), 4.5),
+        "fg-disabled": mix(fg, canvas, 0.62),
+        "line": mix(canvas, fg, 0.12),
+        "line-strong": mix(canvas, fg, 0.24),
+        "line-input": _ensure_contrast_all(
+            mix(canvas, fg, 0.45), (surface, canvas), 3.0
+        ),
+        "primary": primary,
+        "primary-hover": primary_hover,
+        "on-primary": on_primary,
+        "primary-soft": primary_soft,
+        "on-primary-soft": on_primary_soft,
+        "accent": accent,
+        "accent-soft": accent_soft,
+        "on-accent": on_accent,
+        "link": link,
+        "focus": focus,
+        "highlight": highlight,
+        "on-highlight": on_highlight,
+    }
+
+    overrides = model.feedback if isinstance(model.feedback, dict) else {}
+    for role in FEEDBACK_ROLES:
+        anchor = overrides.get(role, FEEDBACK_ANCHORS[role])
+        soft = mix(canvas, anchor, feedback_soft)
+        solid = _ensure_contrast_all(anchor, (canvas, surface), 3.0)
+        text = _ensure_contrast_all(anchor, (canvas, surface), 4.5)
+        tokens[role] = text
+        tokens[f"{role}-soft"] = soft
+        tokens[f"{role}-solid"] = solid
+        tokens[f"on-{role}"] = _on_color(solid)
+        tokens[f"on-{role}-soft"] = ensure_contrast(text, soft, 4.5)
+
+    tokens.update(_chart_tokens(model, mode, surface))
+
+    if set(tokens) != set(SEMANTIC_COLOR_KEYS):
+        raise RuntimeError("semantic token set drifted from SEMANTIC_COLOR_KEYS")
+    return tokens
+
+
+# ---------------------------------------------------------------------------
+# CSS rendering
+# ---------------------------------------------------------------------------
+
+
+def _comment(text: Any) -> str:
+    return " ".join(str(text).split()).replace("*/", "* /")
+
+
+def _css_px(value: float) -> str:
+    return f"{value:g}px"
+
+
+def _declarations(tokens: dict[str, str]) -> list[str]:
+    lines: list[str] = []
+    for key in SEMANTIC_COLOR_KEYS:
+        if key == "line":
+            lines.append(
+                "  /* line and line-strong are decorative separators. "
+                "Use --b-line-input (>=3:1) for control boundaries (WCAG 1.4.11). */"
+            )
+        if key == "primary":
+            lines.append(
+                "  /* primary is UI and large text only (>=3:1 vs canvas). "
+                "For body text use --b-link or --b-fg. */"
+            )
+        lines.append(f"  --b-{key}: {tokens[key]};")
+    return lines
+
+
+def _common_declarations(model: _Model) -> list[str]:
+    lines: list[str] = ["  /* Brand palette — approved hex, theme invariant */"]
+    lines.extend(
+        f"  --b-color-{color.slug}: {color.hex}; "
+        f"/* {_comment(color.name)} · {color.role} */"
+        for color in model.colors
+    )
+
+    lines.extend(
+        (
+            "",
+            "  /* Type — display for headlines, body for reading. */",
+            f"  --b-display: {model.display_stack};",
+            f"  --b-body: {model.body_stack};",
+            f"  --b-weight-display: {model.display_weight};",
+            f"  --b-weight-body: {model.body_weight};",
+            f"  --b-tracking-display: {model.tracking[0]};",
+            f"  --b-tracking-body: {model.tracking[1]};",
+            f"  --b-case-display: {model.case[0]};",
+            f"  --b-case-body: {model.case[1]};",
+            "",
+            "  /* Type scale — size = base * ratio^n; leading = 1.6 - 0.07n (floor 1.05). */",
+        )
+    )
+    for name, size, leading in _type_steps(model):
+        lines.append(f"  --b-text-{name}: {size}px;")
+        lines.append(f"  --b-leading-{name}: {leading:g};")
+
+    lines.extend(
+        (
+            "",
+            f"  /* Spacing — multiples of the {model.unit}px unit */",
+            f"  --b-unit: {model.unit}px;",
+        )
+    )
+    for step in range(0, 17):
+        lines.append(f"  --b-space-{step}: {step * model.unit}px;")
+
+    lines.extend(("", "  /* Radius */"))
+    for key in RADIUS_KEYS:
+        lines.append(f"  --b-radius-{key}: {_css_px(model.radius[key])};")
+
+    lines.extend(("", "  /* Elevation */"))
+    for index, value in enumerate(SHADOW_SCALES[model.shadows], start=1):
+        lines.append(f"  --b-shadow-{index}: {value};")
+
+    if model.gradient is not None:
+        lines.extend(
+            ("", "  /* Brand gradient */", f"  --b-gradient: {_gradient_css(model.gradient)};")
+        )
+    return lines
+
+
+def _theme_css(model: _Model) -> str:
+    header = "\n".join(
+        (
+            "/* Brand Engine · theme.css — generated by scripts/build_theme.py from brand.json.",
+            "   Do not edit by hand; change brand.json and regenerate.",
+            f"   Brand: {_comment(model.name)}",
+            f"   Purpose: {_comment(model.purpose)}",
+            "   --b-color-* keeps the approved hex; semantic tokens may shift for contrast.",
+            f"   Modes: {', '.join(model.modes)} (default: {model.default_mode}). "
+            f"Gradient: {'yes' if model.gradient else 'none'}. */",
+        )
+    )
+
+    tokens = {mode: _semantic_tokens(model, mode) for mode in THEME_MODES}
+    root_mode = "light" if "light" in model.modes else "dark"
+
+    lines: list[str] = [":root {", f"  color-scheme: {root_mode};", ""]
+    lines.extend(_common_declarations(model))
+    lines.extend(("", f"  /* Semantic tokens — {root_mode} */"))
+    lines.extend(_declarations(tokens[root_mode]))
+    lines.append("}")
+
+    if "light" in model.modes and "dark" in model.modes:
+        lines.extend(
+            (
+                "",
+                '[data-theme="dark"] {',
+                "  color-scheme: dark;",
+                "",
+                "  /* Semantic tokens — dark */",
+            )
+        )
+        lines.extend(_declarations(tokens["dark"]))
+        lines.append("}")
+
+    tokens_block = "\n".join(lines)
+    template = TEMPLATE_FILE.read_text(encoding="utf-8")
+    if "{{BRAND_HEADER}}" not in template or "{{BRAND_TOKENS}}" not in template:
+        raise BrandError(f"theme template is missing placeholders: {TEMPLATE_FILE}")
+    return template.replace("{{BRAND_HEADER}}", header).replace(
+        "{{BRAND_TOKENS}}", tokens_block
+    )
+
+
+def _tailwind_css(model: _Model) -> str:
+    lines: list[str] = [
+        "/* Brand Engine · tailwind-theme.css — generated by scripts/build_theme.py.",
+        '   Load inside <style type="text/tailwindcss">. Colors point at --b-* tokens,',
+        "   so bg-surface and text-fg-muted switch with the theme automatically.",
+        "   Semantic utilities only: bg-surface, text-fg-muted, border-line, bg-primary,",
+        "   text-on-primary, text-accent, bg-highlight, and the brand gradient utility.",
+        "   primary is UI and large text only (>=3:1 vs canvas); use text-link or text-fg for body text.",
+        "   line and line-strong are decorative separators; use line-input for control boundaries.",
+        "   Never use palette utilities such as bg-blue-600 or a bare hex in content. */",
+        "",
+        "@custom-variant dark (&:where([data-theme=dark], [data-theme=dark] *));",
+        "",
+        "@theme inline {",
+        "  --font-sans: var(--b-body);",
+        "  --font-display: var(--b-display);",
+        "",
+        "  /* Semantic colors */",
+    ]
+    lines.extend(f"  --color-{key}: var(--b-{key});" for key in SEMANTIC_COLOR_KEYS)
+    lines.extend(
+        (
+            "}",
+            "",
+            "@theme {",
+            f"  --spacing: {model.unit}px;",
+            "",
+            "  /* Type scale — size and coupled line-height */",
+        )
+    )
+    for name, size, leading in _type_steps(model):
+        lines.append(f"  --text-{name}: {size}px;")
+        lines.append(f"  --text-{name}--line-height: {leading:g};")
+
+    lines.extend(("", "  /* Radius */"))
+    for key in RADIUS_KEYS:
+        lines.append(f"  --radius-{key}: {_css_px(model.radius[key])};")
+
+    lines.extend(("", "  /* Elevation */"))
+    for index, value in enumerate(SHADOW_SCALES[model.shadows], start=1):
+        lines.append(f"  --shadow-{index}: {value};")
+
+    lines.append("}")
+
+    if model.gradient is not None:
+        lines.extend(
+            (
+                "",
+                "/* Brand gradient utility (emitted only when brand.json defines a gradient). */",
+                "@utility bg-grad-brand { background-image: var(--b-gradient); }",
+            )
+        )
+    return "\n".join(lines) + "\n"
+
+
+def render_theme(brand: dict[str, Any]) -> ThemeBuild:
+    """Render both stylesheets from an already parsed brand object."""
+
+    model = _build_model(brand)
+    return ThemeBuild(
+        theme_css=_theme_css(model),
+        tailwind_theme_css=_tailwind_css(model),
+    )
+
+
+# ---------------------------------------------------------------------------
 # Public API
 # ---------------------------------------------------------------------------
 
@@ -959,8 +1488,59 @@ def missing_brand_behavior() -> str:
     return "ask-for-path-or-discovery"
 
 
-if __name__ == "__main__":
-    raise SystemExit(
-        "build_theme: the theme builder lands in a later task; "
-        "this module currently exposes the v2 brand model only."
+def build_theme(
+    brand_path: str | Path, out_dir: str | Path, force: bool = False
+) -> ThemeBuild:
+    """Build and write ``theme.css`` and ``tailwind-theme.css`` into ``out_dir``."""
+
+    data = _read_brand(brand_path)
+    result = render_theme(data)
+
+    out = Path(out_dir)
+    if out.exists() and not out.is_dir():
+        raise BrandError(f"{out}: --out must be a directory")
+    out.mkdir(parents=True, exist_ok=True)
+
+    targets = (out / THEME_FILE, out / TAILWIND_FILE)
+    if not force:
+        existing = [str(target) for target in targets if target.exists()]
+        if existing:
+            raise FileExistsError(
+                f"refusing to overwrite {', '.join(existing)} without --force"
+            )
+
+    targets[0].write_text(result.theme_css, encoding="utf-8")
+    targets[1].write_text(result.tailwind_theme_css, encoding="utf-8")
+    return result
+
+
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(
+        description="Build theme.css and tailwind-theme.css from brand.json."
     )
+    parser.add_argument("--brand", help="path to brand.json (flag wins over discovery)")
+    parser.add_argument("--out", default=".", help="output directory (default: .)")
+    parser.add_argument("--force", action="store_true", help="replace existing output files")
+    args = parser.parse_args(argv)
+
+    try:
+        brand_path = resolve_brand_path(args.brand)
+        if brand_path is None:
+            print(
+                "No brand.json found. Pass --brand <path>, create ./brand.json, "
+                "or run discovery first (see SKILL.md, Phase 0).",
+                file=sys.stderr,
+            )
+            return 2
+        build_theme(brand_path, args.out, force=args.force)
+    except (BrandError, FileExistsError, OSError) as exc:
+        print(f"build_theme: {exc}", file=sys.stderr)
+        return 2
+
+    out = Path(args.out)
+    print(f"wrote {out / THEME_FILE} and {out / TAILWIND_FILE}")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

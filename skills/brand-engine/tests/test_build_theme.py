@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import copy
 import json
+import re
 import sys
 import tempfile
 from pathlib import Path
@@ -411,6 +412,251 @@ def test_contrast_ratio_matches_wcag_reference() -> None:
     mod = builder()
     assert abs(mod.contrast_ratio("#000000", "#FFFFFF") - 21.0) < 0.01
     assert abs(mod.contrast_ratio("#A6402F", "#A6402F") - 1.0) < 0.001
+
+
+# ---------------------------------------------------------------------------
+# Theme generation
+# ---------------------------------------------------------------------------
+
+TYPE_STEP_NAMES = (
+    "xs",
+    "sm",
+    "base",
+    "lg",
+    "xl",
+    "2xl",
+    "3xl",
+    "4xl",
+    "5xl",
+    "6xl",
+    "7xl",
+    "8xl",
+)
+
+
+def render(
+    mutate: Callable[[dict[str, Any]], None] | None = None,
+    name: str = "forno-e-brasa",
+):
+    mod = builder()
+    data = copy.deepcopy(brand_data(name))
+    if mutate is not None:
+        mutate(data)
+    return mod, data, mod.render_theme(data)
+
+
+def css_block(css: str, selector: str) -> str:
+    pattern = re.escape(selector) + r"\s*\{(.*?)\n\}"
+    match = re.search(pattern, css, re.S)
+    assert match is not None, f"missing CSS block: {selector}"
+    return match.group(1)
+
+
+def css_tokens(css: str, selector: str = ":root") -> dict[str, str]:
+    return dict(re.findall(r"(--b-[a-z0-9-]+):\s*([^;\n]+);", css_block(css, selector)))
+
+
+def test_theme_has_core_tokens() -> None:
+    mod, data, built = render()
+    model = mod._build_model(data)
+    ink_slug = next(color.slug for color in model.colors if color.role == "ink")
+    css = built.theme_css
+
+    for token in (
+        "--b-canvas",
+        "--b-surface",
+        "--b-primary",
+        "--b-accent",
+        "--b-accent-soft",
+        "--b-on-accent",
+        "--b-band",
+        "--b-fg",
+        "--b-link",
+        "--b-focus",
+        f"--b-color-{ink_slug}",
+    ):
+        assert f"{token}:" in css, token
+
+
+def test_feedback_tokens_meet_contrast() -> None:
+    mod, _, built = render()
+    css = built.theme_css
+
+    for selector in (":root", '[data-theme="dark"]'):
+        tokens = css_tokens(css, selector)
+        canvas = tokens["--b-canvas"]
+        surface = tokens["--b-surface"]
+        for role in ("success", "warning", "danger", "info"):
+            text = tokens[f"--b-{role}"]
+            soft = tokens[f"--b-{role}-soft"]
+            solid = tokens[f"--b-{role}-solid"]
+            on_soft = tokens[f"--b-on-{role}-soft"]
+            on_solid = tokens[f"--b-on-{role}"]
+
+            assert mod.contrast_ratio(text, canvas) >= 4.5, (selector, role, "text on canvas")
+            assert mod.contrast_ratio(on_soft, soft) >= 4.5, (selector, role, "on soft")
+            assert mod.contrast_ratio(on_solid, solid) >= 4.5, (selector, role, "on solid")
+            assert mod.contrast_ratio(solid, surface) >= 3.0, (selector, role, "solid on surface")
+
+
+def test_chart_tokens_count_and_contrast() -> None:
+    mod, _, built = render()
+    css = built.theme_css
+
+    for selector in (":root", '[data-theme="dark"]'):
+        tokens = css_tokens(css, selector)
+        surface = tokens["--b-surface"]
+        numbers = {
+            int(match.group(1))
+            for key in tokens
+            if (match := re.match(r"--b-chart-(\d+)$", key))
+        }
+        assert numbers == set(range(1, 9)), selector
+        values = [tokens[f"--b-chart-{index}"] for index in range(1, 9)]
+        assert len(set(values)) == 8, (selector, values)
+        for value in values:
+            assert mod.contrast_ratio(value, surface) >= 3.0, (selector, value)
+
+
+def test_dark_mode_optional() -> None:
+    mod = builder()
+
+    def build(modes: list[str]):
+        data = copy.deepcopy(brand_data())
+        data["design"]["theme"]["modes"] = modes
+        data["design"]["theme"]["default"] = modes[0]
+        model = mod._build_model(data)
+        return model, mod.render_theme(data)
+
+    light_model, light_built = build(["light"])
+    assert '[data-theme="dark"]' not in light_built.theme_css
+    assert "color-scheme: light" in light_built.theme_css
+
+    dark_model, dark_built = build(["dark"])
+    assert '[data-theme="dark"]' not in dark_built.theme_css
+    assert "color-scheme: dark" in dark_built.theme_css
+    dark_root = css_tokens(dark_built.theme_css)
+    assert dark_root["--b-canvas"] == mod._semantic_tokens(dark_model, "dark")["canvas"]
+
+    light_canvas = css_tokens(light_built.theme_css)["--b-canvas"]
+    assert mod.relative_luminance(dark_root["--b-canvas"]) < mod.relative_luminance(
+        light_canvas
+    )
+
+    both_model, both_built = build(["light", "dark"])
+    assert "color-scheme: light" in both_built.theme_css
+    assert "color-scheme: dark" in both_built.theme_css
+    assert '[data-theme="dark"]' in both_built.theme_css
+
+
+def test_gradient_optional() -> None:
+    _, _, plain = render()
+    assert "--b-gradient:" not in plain.theme_css
+    assert "bg-grad-brand" not in plain.tailwind_theme_css
+
+    _, _, gradient = render(name="luxury")
+    assert "--b-gradient:" in gradient.theme_css
+    assert "bg-grad-brand" in gradient.tailwind_theme_css
+
+
+def test_gradient_three_stops() -> None:
+    _, _, built = render(name="luxury")
+    assert (
+        "linear-gradient(120deg, #C6A15B 0%, #F2EBDD 50%, #6E3B52 100%)"
+        in built.theme_css
+    )
+
+
+def test_unit_4_and_8() -> None:
+    def build(unit: int) -> str:
+        data = copy.deepcopy(brand_data())
+        data["design"]["shape"]["unit"] = unit
+        return builder().render_theme(data).theme_css
+
+    four = build(4)
+    assert "--b-unit: 4px;" in four
+    assert "--b-space-1: 4px;" in four
+
+    eight = build(8)
+    assert "--b-unit: 8px;" in eight
+    assert "--b-space-1: 8px;" in eight
+
+
+def test_radius_profiles() -> None:
+    def radius_tokens(radius: Any) -> list[str]:
+        data = copy.deepcopy(brand_data())
+        data["design"]["shape"]["radius"] = radius
+        tokens = css_tokens(builder().render_theme(data).theme_css)
+        return [tokens[f"--b-radius-{key}"] for key in ("xs", "sm", "md", "lg", "xl")]
+
+    assert radius_tokens("sharp") == ["0px", "0px", "2px", "4px", "4px"]
+    assert radius_tokens("soft") == ["4px", "8px", "12px", "16px", "24px"]
+    assert radius_tokens("round") == ["8px", "12px", "16px", "24px", "9999px"]
+
+    custom = radius_tokens({"xs": 1, "lg": 10})
+    assert custom[0] == "1px"
+    assert custom[3] == "10px"
+    assert custom[1] == "8px"  # filled from the soft profile
+
+
+def test_type_scale_has_12_steps() -> None:
+    _, _, built = render()
+    tokens = css_tokens(built.theme_css)
+
+    sizes = [int(tokens[f"--b-text-{name}"].removesuffix("px")) for name in TYPE_STEP_NAMES]
+    assert len(sizes) == 12
+    assert sizes == sorted(sizes)
+    assert len(set(sizes)) == 12
+    assert sizes[2] == 16  # base
+    assert sizes[3] == 20  # base * 1.25
+
+    for name in TYPE_STEP_NAMES:
+        assert f"--b-leading-{name}:" in built.theme_css
+
+
+def test_tailwind_theme_maps_new_tokens() -> None:
+    _, _, built = render()
+    css = built.tailwind_theme_css
+
+    for token in (
+        "--color-success",
+        "--color-chart-1",
+        "--color-accent-soft",
+        "--font-display",
+        "--text-7xl",
+        "--radius-xs",
+        "--shadow-2",
+    ):
+        assert f"{token}:" in css, token
+
+
+def test_build_theme_writes_files_and_refuses_overwrite() -> None:
+    mod = builder()
+    with tempfile.TemporaryDirectory() as tmp:
+        out = Path(tmp) / "theme"
+        result = mod.build_theme(SAMPLE_BRAND, out)
+
+        assert (out / "theme.css").read_text(encoding="utf-8") == result.theme_css
+        assert (out / "tailwind-theme.css").read_text(
+            encoding="utf-8"
+        ) == result.tailwind_theme_css
+
+        try:
+            mod.build_theme(SAMPLE_BRAND, out)
+        except FileExistsError:
+            pass
+        else:
+            raise AssertionError("a second build must raise FileExistsError")
+
+        rewritten = mod.build_theme(SAMPLE_BRAND, out, force=True)
+        assert (out / "theme.css").read_text(encoding="utf-8") == rewritten.theme_css
+
+
+def test_theme_is_deterministic() -> None:
+    _, _, first = render(name="luxury")
+    _, _, second = render(name="luxury")
+    assert first.theme_css == second.theme_css
+    assert first.tailwind_theme_css == second.tailwind_theme_css
 
 
 if __name__ == "__main__":

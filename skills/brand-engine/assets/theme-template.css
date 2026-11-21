@@ -31,6 +31,7 @@
   h4 { font-size: var(--b-text-lg); line-height: var(--b-leading-lg); }
   p { margin: 0 0 var(--b-space-2); text-wrap: pretty; }
   a { color: var(--b-link); text-decoration: underline; text-underline-offset: 3px; }
+  .bg-band a, .be-slide--band a, .be-social-frame--band a { color: var(--b-band-accent); }
   img, svg { max-width: 100%; }
   :focus-visible {
     outline: 2px solid var(--b-focus);
