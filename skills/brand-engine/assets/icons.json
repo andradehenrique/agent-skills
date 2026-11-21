@@ -1,0 +1,220 @@
+{
+  "families": {
+    "fluent": "Fluent UI System Icons (24px regular); brand-engine default.",
+    "lucide": "Lucide — 24px stroke icons, inherits currentColor.",
+    "phosphor": "Phosphor Icons (Iconify prefix ph:), regular weight.",
+    "tabler": "Tabler Icons — 24px stroke icons, inherits currentColor."
+  },
+  "icons": {
+    "arrow-right": {
+      "fluent": "fluent:arrow-right-24-regular",
+      "lucide": "lucide:arrow-right",
+      "phosphor": "ph:arrow-right",
+      "tabler": "tabler:arrow-right"
+    },
+    "arrow-left": {
+      "fluent": "fluent:arrow-left-24-regular",
+      "lucide": "lucide:arrow-left",
+      "phosphor": "ph:arrow-left",
+      "tabler": "tabler:arrow-left"
+    },
+    "check": {
+      "fluent": "fluent:checkmark-24-regular",
+      "lucide": "lucide:check",
+      "phosphor": "ph:check",
+      "tabler": "tabler:check"
+    },
+    "x": {
+      "fluent": "fluent:dismiss-24-regular",
+      "lucide": "lucide:x",
+      "phosphor": "ph:x",
+      "tabler": "tabler:x"
+    },
+    "plus": {
+      "fluent": "fluent:add-24-regular",
+      "lucide": "lucide:plus",
+      "phosphor": "ph:plus",
+      "tabler": "tabler:plus"
+    },
+    "search": {
+      "fluent": "fluent:search-24-regular",
+      "lucide": "lucide:search",
+      "phosphor": "ph:magnifying-glass",
+      "tabler": "tabler:search"
+    },
+    "menu": {
+      "fluent": "fluent:navigation-24-regular",
+      "lucide": "lucide:menu",
+      "phosphor": "ph:list",
+      "tabler": "tabler:menu"
+    },
+    "chevron-down": {
+      "fluent": "fluent:chevron-down-24-regular",
+      "lucide": "lucide:chevron-down",
+      "phosphor": "ph:caret-down",
+      "tabler": "tabler:chevron-down"
+    },
+    "external-link": {
+      "fluent": "fluent:open-24-regular",
+      "lucide": "lucide:external-link",
+      "phosphor": "ph:arrow-square-out",
+      "tabler": "tabler:external-link"
+    },
+    "alert-triangle": {
+      "fluent": "fluent:warning-24-regular",
+      "lucide": "lucide:triangle-alert",
+      "phosphor": "ph:warning",
+      "tabler": "tabler:alert-triangle"
+    },
+    "alert-circle": {
+      "fluent": "fluent:error-circle-24-regular",
+      "lucide": "lucide:circle-alert",
+      "phosphor": "ph:warning-circle",
+      "tabler": "tabler:alert-circle"
+    },
+    "info": {
+      "fluent": "fluent:info-24-regular",
+      "lucide": "lucide:info",
+      "phosphor": "ph:info",
+      "tabler": "tabler:info-circle"
+    },
+    "check-circle": {
+      "fluent": "fluent:checkmark-circle-24-regular",
+      "lucide": "lucide:circle-check",
+      "phosphor": "ph:check-circle",
+      "tabler": "tabler:circle-check"
+    },
+    "x-circle": {
+      "fluent": "fluent:dismiss-circle-24-regular",
+      "lucide": "lucide:circle-x",
+      "phosphor": "ph:x-circle",
+      "tabler": "tabler:circle-x"
+    },
+    "chart-line": {
+      "fluent": "fluent:data-line-24-regular",
+      "lucide": "lucide:chart-line",
+      "phosphor": "ph:chart-line",
+      "tabler": "tabler:chart-line"
+    },
+    "chart-bar": {
+      "fluent": "fluent:data-bar-vertical-24-regular",
+      "lucide": "lucide:chart-bar",
+      "phosphor": "ph:chart-bar",
+      "tabler": "tabler:chart-bar"
+    },
+    "users": {
+      "fluent": "fluent:people-24-regular",
+      "lucide": "lucide:users",
+      "phosphor": "ph:users",
+      "tabler": "tabler:users"
+    },
+    "user": {
+      "fluent": "fluent:person-24-regular",
+      "lucide": "lucide:user",
+      "phosphor": "ph:user",
+      "tabler": "tabler:user"
+    },
+    "settings": {
+      "fluent": "fluent:settings-24-regular",
+      "lucide": "lucide:settings",
+      "phosphor": "ph:gear",
+      "tabler": "tabler:settings"
+    },
+    "home": {
+      "fluent": "fluent:home-24-regular",
+      "lucide": "lucide:home",
+      "phosphor": "ph:house",
+      "tabler": "tabler:home"
+    },
+    "file-text": {
+      "fluent": "fluent:document-24-regular",
+      "lucide": "lucide:file-text",
+      "phosphor": "ph:file-text",
+      "tabler": "tabler:file-text"
+    },
+    "calendar": {
+      "fluent": "fluent:calendar-24-regular",
+      "lucide": "lucide:calendar",
+      "phosphor": "ph:calendar",
+      "tabler": "tabler:calendar"
+    },
+    "clock": {
+      "fluent": "fluent:clock-24-regular",
+      "lucide": "lucide:clock",
+      "phosphor": "ph:clock",
+      "tabler": "tabler:clock"
+    },
+    "mail": {
+      "fluent": "fluent:mail-24-regular",
+      "lucide": "lucide:mail",
+      "phosphor": "ph:envelope",
+      "tabler": "tabler:mail"
+    },
+    "phone": {
+      "fluent": "fluent:call-24-regular",
+      "lucide": "lucide:phone",
+      "phosphor": "ph:phone",
+      "tabler": "tabler:phone"
+    },
+    "map-pin": {
+      "fluent": "fluent:location-24-regular",
+      "lucide": "lucide:map-pin",
+      "phosphor": "ph:map-pin",
+      "tabler": "tabler:map-pin"
+    },
+    "download": {
+      "fluent": "fluent:arrow-download-24-regular",
+      "lucide": "lucide:download",
+      "phosphor": "ph:download",
+      "tabler": "tabler:download"
+    },
+    "upload": {
+      "fluent": "fluent:arrow-upload-24-regular",
+      "lucide": "lucide:upload",
+      "phosphor": "ph:upload",
+      "tabler": "tabler:upload"
+    },
+    "trash": {
+      "fluent": "fluent:delete-24-regular",
+      "lucide": "lucide:trash",
+      "phosphor": "ph:trash",
+      "tabler": "tabler:trash"
+    },
+    "edit": {
+      "fluent": "fluent:edit-24-regular",
+      "lucide": "lucide:pencil",
+      "phosphor": "ph:pencil",
+      "tabler": "tabler:edit"
+    },
+    "filter": {
+      "fluent": "fluent:filter-24-regular",
+      "lucide": "lucide:filter",
+      "phosphor": "ph:funnel",
+      "tabler": "tabler:filter"
+    },
+    "star": {
+      "fluent": "fluent:star-24-regular",
+      "lucide": "lucide:star",
+      "phosphor": "ph:star",
+      "tabler": "tabler:star"
+    },
+    "heart": {
+      "fluent": "fluent:heart-24-regular",
+      "lucide": "lucide:heart",
+      "phosphor": "ph:heart",
+      "tabler": "tabler:heart"
+    },
+    "sun": {
+      "fluent": "fluent:weather-sunny-24-regular",
+      "lucide": "lucide:sun",
+      "phosphor": "ph:sun",
+      "tabler": "tabler:sun"
+    },
+    "moon": {
+      "fluent": "fluent:weather-moon-24-regular",
+      "lucide": "lucide:moon",
+      "phosphor": "ph:moon",
+      "tabler": "tabler:moon"
+    }
+  }
+}
