@@ -2,29 +2,40 @@
 
 Use this file in Phase 1. Discovery is **text-first**: a sentence about the
 business, who it serves and where it will live is enough to start. Images in the
-working directory are optional extra input, never a requirement.
+working directory are optional input, never a requirement.
 
-## Rules
+## UX rule — proponha, não interrogue
 
-- Ask **5–8** questions, only the ones the user has not already answered.
-- One batch, short sentences, no jargon. The user can answer "não sei" and you
-  propose a default with the assumption written down.
-- Closed answers are better than essays: offer the options and let the user pick.
-- Do not generate `brand.json`, `theme.css`, `logo.svg` or any HTML before the
-  user confirms one route (Gate 1).
+The job of discovery is not to collect decisions; it is to return a system the
+user can react to.
+
+- Ask **5–8** short questions, only the ones the user has not already answered.
+- Propose the visual system from the answers: palette with roles, type, shape,
+  density, theme, icons, imagery and composition. The user accepts, swaps the
+  route or adjusts one point.
+- **Granularidade sob demanda:** the default flow does not ask about radius,
+  spacing or scale. If the user asks to control it ("quero ajustar o radius"),
+  open the control and record the choice in `brand.json`.
+- The route already carries the proposed system. Keep one short summary (palette,
+  type, shape, composition) next to it; there is no third gate. The manual gate
+  remains the only mandatory gate.
+- `brand.json` is the state. "Ajusta X" regenerates theme, manual and brand-kit
+  and revalidates, without restarting discovery.
 - Never invent a fact to fill a gap. Ask once; if it stays missing, write
   `[placeholder]` and keep going.
+
+Do not generate `brand.json`, `theme.css`, `logo.svg` or any HTML before the
+user confirms one route (Gate 1).
 
 ## The closed question list (7)
 
 ### P1 — Purpose in one sentence
-What does the business do, for whom, and why does it matter? Answer in one
-sentence. If the user gives three, ask which one is the promise.
+What does the business do, for whom, and why does it matter? If the user gives
+three sentences, ask which one is the promise.
 
 ### P2 — Persona
-Who decides and who uses it? Ask for age range, context of use and what they
-value. Two or three sentences is enough; a named segment is better than
-"todo mundo".
+Who decides and who uses it? Ask for context of use and what they value. A named
+segment is better than "todo mundo"; two or three sentences are enough.
 
 ### P3 — Visual territory
 Pick up to two: rústico, minimal, editorial, técnico, lúdico, luxo, popular,
@@ -42,17 +53,19 @@ reference; ask for the concrete trait: color, type, density, photo, motion.
 
 ### P6 — Productive vs. expressive
 On a 1–5 scale, where 1 is sober/technical and 5 is bold/performative? This sets
-the type contrast, the amount of color and the copy energy.
+type contrast, color proportion and copy energy.
 
 ### P7 — Where the brand will live first
-Mark all that apply: landing (`onepage`), deck (`deck`), report (`report`),
-social (`social`). This decides which formats Phase 4 proposes first.
+Mark all that apply: landing (`onepage`), deck (`deck`), report (`report`), social
+(`social`), internal app (`app`). This decides which 2–3 formats Phase 4
+proposes. `manual` and `brand-kit` are always the system artifacts, not one of
+those choices.
 
 ## Optional images in the working directory
 
 If the user dropped images into the working directory, read them as optional
 input: `*.png`, `*.jpg`, `*.jpeg`, `*.webp`, `*.svg`, `*.pdf`. Look for palette,
-type, density and photo treatment; do not copy a layout literally.
+type, density, imagery treatment and composition; do not copy a layout literally.
 
 If an image is **corrupt or unreadable**, ignore that file, say so in **one
 line**, and continue **text-only**. Never retry in a loop, never block the job
@@ -60,57 +73,67 @@ and never crash. A missing or broken image is not a reason to stop discovery.
 
 ## Route template
 
-Propose **2–3 routes**. Every route has the same fields so the user can compare:
+Propose **2–3 routes**. Mark exactly one as **recomendada** and say why in one
+line. Every route uses the same fields so the user can compare:
 
 | Field | What it must contain |
 |---|---|
-| Name | Two or three words the user can say out loud. |
-| Idea | One sentence: the visual and verbal bet. |
-| Palette | 2–4 named colors and the roles they imply (action, surface, accent). |
-| Type | Display + body direction, with a fallback in mind. |
-| Why | At least two answers from P1–P7 that this route satisfies. |
-| Formats | Which of `onepage`, `deck`, `report`, `social` fit first. |
-| Risk | What could go wrong and how you would correct it. |
+| **Ideia** | One sentence: the visual and verbal bet. |
+| **Paleta** | Named colors with their roles: `canvas`, `surface`, `ink`, `primary`, optional `accent` and `support[]`. |
+| **Tipografia** | Display + body direction, weights and fallback. |
+| **Forma** | Radius profile (`sharp`/`soft`/`round` or custom), unit `4`/`8`, shadows. |
+| **Composição** | Direction (`editorial`/`structured`/`poster`/`minimal`), measure and grid. |
+| **Ícones** | Family (`fluent`/`lucide`/`phosphor`/`tabler`), style and size. |
+| **Imagem** | Mode (`photo`/`illustration`/`abstract`/`none`), treatment and placeholder. |
+| **Por que** | At least two answers from P1–P7 that this route satisfies. |
+| **Formatos** | The 2–3 formats that fit first; `brand-kit` is the proof, not a format choice. |
+| **Risco** | What could go wrong and how you would correct it. |
 
 A route is not a mood board and not a final theme. It is a defensible choice the
 user can approve or reject before any file is generated.
 
-## Worked routes — Forno & Brasa
+## Worked routes — Omnia Labs
 
-Answers used: P1 pizza de fermentação longa assada na lenha para a mesa de
-bairro; P2 famílias e casais de 25–45; P3 rústico contemporâneo + natural;
-P4 Criador; P5 barro/fogo + marca editorial; P6 registro 3/5 (caloroso, não
-performático); P7 landing + social.
+Answers used: P1 traduzir IA em operação real para PMEs que precisam decidir
+agora; P2 donos e diretores de PMEs; P3 editorial humanista + técnico; P4 Sábio;
+P5 jornal impresso + software de dados; P6 registro 2/5 (claro, não performático);
+P7 landing + report.
 
-### Rota A — Mesa de Bairro
-**Ideia:** pizza de bairro, mesa compartilhada, calor sem cerimônia.
-**Paleta:** Brasa `#A6402F` (ação), Terracota `#C97B4A` (apoio quente), Creme
-`#F4E9D8` (superfície), Oliva `#5F6B45` (contraste).
-**Tipografia:** display serifada de personalidade (Fraunces) + corpo humanista
-(Source Sans 3), com fallback Georgia/system-ui.
-**Por que:** cumpre P1/P2 (mesa de bairro, família), P3 (rústico contemporâneo)
-e P6 (caloroso sem exagero). É a rota de menor risco para um negócio local.
-**Formatos:** `onepage` + `social`.
-**Risco:** pode ficar genérica se a foto e a copy não mostrarem o forno real.
-
-### Rota B — Forno Vivo
-**Ideia:** o fogo é o espetáculo; a marca se comporta como o forno, não como a mesa.
-**Paleta:** Brasa `#A6402F`, Creme `#F4E9D8`, carvão como neutro escuro.
-**Tipografia:** display condensada de peso alto + corpo neutro; contraste grande
-entre título e leitura.
-**Por que:** atende P4 (Criador), P5 (fogo como referência) e o topo do P6
-(expressivo). Funciona melhor quando o conteúdo é foto e vídeo.
-**Formatos:** `social` + `deck`.
-**Risco:** cansa em texto longo e pode soar agressiva para P2 (famílias).
-
-### Rota C — Casa de Fermento
-**Ideia:** o tempo e a massa são o produto; a marca é calma, precisa e editorial.
-**Paleta:** Oliva `#5F6B45`, Creme `#F4E9D8`, Terracota `#C97B4A` como acento.
-**Tipografia:** serifada de contraste + sans humanista; entrelinha generosa.
-**Por que:** traduz P1 (fermentação longa), P3 (natural) e o lado artesanal de
-P2. É a rota que melhor envelhece em relatório e manual.
+### Rota A — Método Aberto (recomendada)
+**Ideia:** papel e tinta para explicar um método técnico sem hype.
+**Paleta:** Papel `#FBF8F1` (canvas), Giz `#FFFFFF` (surface), Tinta `#1E1C17` (ink), Petróleo `#0F5A6B` (primary), Areia `#E8DFCE` (accent), Oliva `#7C8363` (support).
+**Tipografia:** Newsreader 600 + Source Sans 3 400; escala 16/1.25, fallback Georgia/system-ui.
+**Forma:** radius `soft` (4/8/12/16/24), unit `8`, shadows `soft`.
+**Composição:** `editorial`, medida `65ch`, grid `12`.
+**Ícones:** Fluent regular, 16px, traço fino.
+**Imagem:** `abstract` com papel e grão leve; `placehold` enquanto não houver foto real.
+**Por que:** cumpre P1/P4 (Sábio que explica), P3 (editorial humanista) e P6 (claro, não performático). É a rota de menor risco para uma consultoria.
 **Formatos:** `onepage` + `report`.
-**Risco:** pode parecer caro ou distante do bairro se o tom não for caloroso.
+**Risco:** pode ficar sóbria demais no social; corrigir com um pôster de uma ideia e tipo maior, sem mudar o sistema.
+
+### Rota B — Sinal Técnico
+**Ideia:** a marca se comporta como um painel de sinais: contraste alto, dados primeiro.
+**Paleta:** Grafite `#15181C` (canvas), Carvão `#20252B` (surface), Gelo `#F2F5F7` (ink), Ciano `#1B7F8C` (primary), Âmbar `#D99A2B` (accent).
+**Tipografia:** display sans condensada 700 + corpo mono 400; escala 16/1.2.
+**Forma:** radius `sharp` (0/0/2/4/4), unit `4`, shadows `none`.
+**Composição:** `structured`, medida `60ch`, grid `16`.
+**Ícones:** Lucide outline, 16px.
+**Imagem:** `abstract` com grid e ruído; `placehold`.
+**Por que:** atende P1 (operação e decisão), P4 (mago/analista) e o topo de P6; funciona quando o conteúdo é número e tabela.
+**Formatos:** `report` + `app`.
+**Risco:** cansa em leitura longa e pode soar fria para P2; corrigir com medida menor e mais espaço.
+
+### Rota C — Caderno de Campo
+**Ideia:** a marca é um caderno de anotações: próximo, datado, com margem para comentário.
+**Paleta:** Papel `#F7F3E8` (canvas), Branco `#FFFFFF` (surface), Tinta `#232019` (ink), Musgo `#4F6248` (primary), Ocre `#C58B3C` (accent), Azul `#3D5A80` (support).
+**Tipografia:** display serifada 500 + corpo humanista 400; escala 16/1.3.
+**Forma:** radius `round` (8/12/16/24/9999), unit `8`, shadows `soft`.
+**Composição:** `minimal`, medida `70ch`, grid `12`.
+**Ícones:** Phosphor regular, 20px.
+**Imagem:** `illustration` com traço manual; `placehold`.
+**Por que:** traduz P2 (dono de PME que anota), P3 (humanista) e P5 (caderno); envelhece bem em manual e relatório.
+**Formatos:** `onepage` + `social`.
+**Risco:** pode parecer informal demais para um contrato B2B; corrigir com tipografia mais contida e menos cor.
 
 ## Gate 1 — route confirmation
 
@@ -123,6 +146,10 @@ does not answer, stop; do not guess a route.
 
 - [ ] 5–8 questions asked; answered ones skipped.
 - [ ] Text-first path works with no images at all.
-- [ ] Optional workdir images read; corrupt ones ignored with one line.
-- [ ] 2–3 routes proposed, each with all template fields.
+- [ ] Optional working-directory images read; a corrupt one is ignored with one
+      line and never crashes.
+- [ ] 2–3 routes proposed, one marked `recomendada`, each with every template
+      field.
+- [ ] Proposed system summarized (palette roles, type, shape, composition);
+      fine-grained controls only on demand.
 - [ ] One route explicitly approved before Phase 2.

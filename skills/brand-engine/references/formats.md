@@ -1,8 +1,10 @@
-# Formats — six files, six jobs, one voice
+# Formats — eight formats, eight jobs, one system
 
-`scripts/new_page.py` turns an approved `brand.json` into one self-contained HTML
-file per format. Each format has a different job; reusing the same copy across
-them is a defect.
+`scripts/new_page.py` turns an approved `brand.json` v2 into one self-contained
+HTML **starter page** per format. The starter has default sections and copy
+slots; it is a ponto de partida, not a finished page and not a mold (não é
+molde). Compose from
+`components.md` and `sections.md`, guided by `design.composition.direction`.
 
 ```bash
 python3 <skill>/scripts/new_page.py --brand brand.json --format <fmt> \
@@ -11,160 +13,210 @@ python3 <skill>/scripts/new_page.py --brand brand.json --format <fmt> \
 
 | Call | Contract |
 |---|---|
-| `new_page(fmt, brand, title, out, theme="light", force=False)` | -> `Path` of the written file; `brand` is a `brand.json` path. |
-| `render_page(fmt, brand, title, theme="light")` | -> HTML string, no I/O. |
+| `new_page(fmt, brand, title, out, theme=None, force=False)` | -> `Path` of the written file; `brand` is a `brand.json` path. |
+| `render_page(fmt, brand, title, theme=None)` | -> HTML string, no I/O; `brand` is the parsed dict. |
 | `--out` | An `.html`/`.htm` file, or a directory where `<fmt>.html` is written. |
+| `--theme` | `light`, `dark`, `system`, `light-only` or `dark-only`; `None` follows `design.theme.default`. Single-mode brands are locked and render no toggle. |
 | `--force` | Required to replace an existing file; nothing is overwritten silently. |
 
-`fmt` is exactly `manual`, `onepage`, `deck`, `report`, `social` or `blank`.
-Every page embeds the pinned Tailwind CDN, the Google Fonts link, the generated
-`theme.css` + `tailwind-theme.css`, the no-flash theme script, the logo sprite
-as the first element inside `<body>`, and the theme toggle. Every page has one
-`<main>`, one `<h1>`, semantic tokens only, and must pass `check_page.py` with
-zero ERROR before delivery.
+`fmt` is exactly `manual`, `brand-kit`, `onepage`, `report`, `deck`, `social`,
+`app` or `blank`. Every page embeds the pinned Tailwind browser CDN, the Google
+Fonts link, the generated `theme.css` + `tailwind-theme.css`, the no-flash theme
+script, the logo lockup and the theme toggle (when the brand has both modes).
+Iconify loads only on `manual`, `onepage`, `report`, `app` and `brand-kit`;
+Chart.js only on `report`, `app` and `brand-kit`; `placehold.co` appears only
+where the composition needs an image. Every page has one `<main>`, one `<h1>`,
+semantic tokens only, and must pass `check_page.py` with zero ERROR before
+delivery.
+
+## Starter page, not mold
+
+- The skeleton is ponto de partida: keep, cut, merge or add sections until the
+  argument is right. A page that only fills the default slots usually looks like
+  every other page.
+- Sections give the vocabulary; `components.md` gives the markup; this file
+  gives the format's job. The composition direction (direção de composição)
+  gives the hierarchy: `editorial` (large headline, reading column, images with
+  air), `structured` (explicit grid, aligned blocks, medium density), `poster`
+  (large type, high contrast, few elements) and `minimal` (space, hierarchy by
+  weight and position).
+- `design.composition.direction` guides section order, grid, measure and rhythm.
+  It does **not** generate a 4×8 matrix of skeleton files. Variety comes from
+  composition plus the catalog, not from 32 files.
+- Default sections are a suggestion, not a checklist. Format-specific rules
+  below are jobs; obey the job, not the count.
 
 ## Format map
 
-| Format | Job | Primary structure |
+| Format | Job | Default starter |
 |---|---|---|
-| `manual` | Governs: the approval artifact and source of truth. | Purpose, voice, colors, pairs, gradient, type, logo, grid, image, signature. |
-| `onepage` | **Sells**: one promise, one action. | Hero, proof, three reasons, testimonial, CTA. |
-| `report` | **Explains**: conclusion first, evidence next. | Cover, summary, data table, findings, recommendations. |
-| `deck` | **Presents**: one idea per slide. | Cover, divider, content, big number, quote, closing. |
-| `social` | **Interrupts**: one idea per frame, made to stop a scroll. | 1080×1080 feed + 1080×1920 story HTML mockups. |
-| `blank` | A shell for a custom page. | Logo, `h1`, purpose, attribute chips, theme toggle. |
+| `manual` | Governs: approval artifact and source of truth. | Purpose, voice, colors, type, logo, grid, icons, imagery, components, composition, applications, signature. |
+| `brand-kit` | Proves: the living proof and format menu. | Logo, colors, feedback, charts, type, icons, imagery, components, mini cases. |
+| `onepage` | **Vende**: one promise, one action. | Hero, proof, how it works, testimonial, CTA. |
+| `report` | **Explica**: conclusion first, evidence next. | Cover, executive summary, data, trend, findings, recommendations. |
+| `deck` | **Apresenta**: one idea per slide. | Cover, divider, assertion, big number, quote, closing. |
+| `social` | **Interrompe**: one idea per frame. | 1080×1080 feed, 1080×1920 story, 1080×1350 image mockups. |
+| `app` | **Opera**: the product surface. | Topbar, sidebar, page header, stats, list, states, chart, dialog form. |
+| `blank` | Hosts: cartaz, convite, menu, cheatsheet or any custom page. | Logo, `h1`, purpose, attribute chips, theme toggle. |
 
-In one line: **onepage sells, report explains, deck presents, social
-interrupts**. The manual does none of those; it sets the rules the others obey.
+In one line: **onepage vende, report explica, deck apresenta, social interrompe,
+app opera, brand-kit prova; manual governa.** The manual sets the rules; the
+brand-kit is the proof; the other formats apply them. The delivery is 2–3
+formats chosen for the context, not every file.
 
 ## Copy that inherits the voice
 
 Read `voice.md` before drafting. The rules that apply to every format:
 
-- Use the manual's voice and the approved attributes; adapt the angle and length
-  to the format. Never paste the same paragraph into a landing, a deck and a
-  report.
+- Use the manual's voice and the approved attributes; adapt angle and length to
+  the format. Never paste the same paragraph into a landing, a deck and a report.
 - One idea per section, slide or frame.
-- Lead with the conclusion for report/deck; lead with the promise for onepage;
-  lead with the interruption for social.
+- Lead with the promise for `onepage`, the conclusion for `report`/`deck`, the
+  interruption for `social`, the task for `app`.
 - No invented fact. Numbers, dates, names, clients, awards, addresses, hours,
-  prices and testimonials stay `[placeholder]` until the user supplies them.
-  Every unresolved placeholder appears in the delivery note (**Nota**).
-- Keep the user's language. pt-BR is the default; code and flags stay English.
+  prices and testimonials stay `[placeholder — what is needed]` until the user
+  supplies them. Every unresolved placeholder appears in the delivery note
+  (**Nota**).
+- Keep the user's language. pt-BR is the default; code, flags and file names stay
+  English.
 
 ## manual — the approval artifact
 
-Generate after the route is approved, before any template:
+Generate after the route is approved, before any template. Default sections:
+purpose and positioning; voice with **SOMOS / NÃO SOMOS** and **Certo / Errado**;
+colors with roles, hex/RGB, feedback, charts, pairs and the optional gradient;
+display and body type with the scale equation and line-heights; logo
+construction, variants, breathing area and misuses; grid and spacing; icon
+style; imagery treatment; components; composition rules; applications; signature.
 
-```bash
-python3 <skill>/scripts/new_page.py --brand brand.json --format manual \
-  --title "Manual de Marca" --out marca-manual.html
-```
-
-Sections, in order: purpose and positioning; tone with **SOMOS / NÃO SOMOS**
-and **Certo / Errado**; colors with HEX, RGB, approximate Pantone (always marked
-as an approximation) and named pairs; the 50/50 gradient at 45°; display and
-body type with the scale equation and line-heights; logo construction,
-variants, breathing area and misuses; the 8px grid; photo and icon checklists;
-signature rules. The checker requires the misuse terms
-recolor/rotate/stretch/replace and a breathing-area comment.
+- “NÃO SOMOS” is proposed from the route and attributes; the user confirms it at
+  the gate. There is no fixed antonym dictionary to copy.
+- The gradient section exists only when the brand defines a gradient.
+- The checker requires the misuse terms recolor/rotate/stretch/replace and a
+  breathing-area comment.
 
 The manual is the mandatory approval gate. Present its path and a short
 checklist, ask for an explicit `ok`, and only then set `"aceite": true` in
 `brand.json`. No script blocks the next phase, so you are the enforcement.
 
-## onepage — sells
+## brand-kit — the proof
 
-Structure and copy job:
+Generated **by default** after the manual. It is a live, responsive, light/dark
+page with Logo, Cores, Feedback, Gráficos, Tipografia, Ícones, Imagem,
+Componentes and Aplicações. The applications are mini cases: landing, report,
+deck, app and social, each rendered with the same components.
+
+- It is the proof of the system and the menu of formats, not one of the 2–3
+  formats proposed for delivery.
+- If the user asks for a single artifact ("só o relatório", "sem kit"), skip the
+  brand-kit and say so in the Nota.
+- Keep it alive: no static screenshot, no invented metrics. Labels, tokens and
+  components are the demonstration.
+
+## onepage — vende
+
+Default starter: hero, proof, how it works, testimonial, CTA.
 
 1. **Hero** — outcome headline (`TITLE`), mechanism subhead (purpose), one
-   primary action and at most one secondary action.
-2. **Proof** — three or four numbers, each with label and basis; never invent a
-   metric.
-3. **Three reasons** — one mechanism per card, two lines of support each.
+   primary action, at most one secondary.
+2. **Proof** — three or four numbers, each with label, base and date; never
+   invent a metric.
+3. **How it works** — one mechanism per step or card, two lines of support.
 4. **Testimonial** — only with a real quote, name, role and permission.
 5. **CTA** — one action, one owner, one deadline.
 
-Copy formula: headline = the result the customer wants; subhead = how; CTA =
-imperative verb. Keep the hero under ~12 words.
+Variations: editorial hero with a full-width image; product hero with a framed
+screenshot; proof-led hero when the number is the argument. Copy formula:
+headline = the result the customer wants; subhead = how; CTA = imperative verb.
+Keep the hero under ~12 words.
 
-Forno & Brasa snippet:
+Example (consultoria B2B): **“A decisão certa sobre IA começa com um diagnóstico
+curto.”** · *Plano de [placeholder] semanas, com dono e prazo.* · **Agendar
+diagnóstico** · Prova: [placeholder — número verificado, base e data].
 
-> **Massa de fermentação longa, assada na lenha, na sua mesa.**
-> Pedir a pizza de hoje · [placeholder — horário e canal de pedido]
-> Prova: [placeholder — número verificado e base]; [placeholder — bairro e
-> tempo de entrega].
+## report — explica
 
-Do not add "a melhor do bairro", years in business or awards without a source.
-
-## report — explains
-
-Structure: cover with subject + conclusion; executive summary with 3–4
+Default starter: cover with subject + conclusion; executive summary with 3–4
 indicators, each with **base and period**; data table with `<caption>` describing
-the cut and `<th scope="col">` on every column; findings with an explicit
-evidence pointer; recommendations with owner and deadline.
+the cut and `<th scope="col">`; trend chart with one highlighted series; findings
+with an explicit evidence pointer; recommendations with owner and deadline.
 
-Copy formula: conclusion first, then the evidence, then the action. Every number
-carries a comparison base. A number without a base is a decoration, not a
-report.
+Variations: memo (no cover), board pack (two-column summary), research note
+(method section before findings). Copy formula: conclusion first, then evidence,
+then action. Every number carries a comparison base. A number without a base is
+decoration, not a report. The chart always has a table fallback.
 
-Forno & Brasa snippet:
+Example: **Resumo:** no período [placeholder], o indicador foi [placeholder],
+variação de [placeholder] sobre a base [placeholder]. **Recomendação:**
+[placeholder] · dono [placeholder] · prazo [placeholder].
 
-> **Resumo:** o fim de semana [placeholder — período] vendeu [placeholder —
-> número] pizzas, [placeholder — variação] sobre a base [placeholder — base].
-> **Recomendação:** [placeholder — ação] · dono [placeholder] · prazo
-> [placeholder].
+## deck — apresenta
 
-## deck — presents
+Default starter: cover, divider, assertion slide, big number (with base), quote
+(real and authorized), closing (next step with owner and deadline). This is a
+default, **sem número fixo de slides**: add a slide when the argument needs one,
+cut when it repeats. Split a slide that carries two ideas.
 
-Six slides by default: cover, divider, content (title + three points), big
-number (with comparison base), quote (real and authorized), closing (next step
-with owner and deadline). The present stage is 1280×720 with container queries;
-phones get scroll mode. Keys: `←`/`→`, `PageUp`/`PageDown`, `Space`, `Home`,
-`End`, `t` for theme, `f` for fullscreen. `#3` deep-links to slide 3. Slides
-that overflow 1280×720 are flagged in the console.
+The present stage is 1280×720 with container queries; phones get scroll mode.
+Keys: `←`/`→`, `PageUp`/`PageDown`, `Space`, `Home`, `End`, `t` for theme, `f`
+for fullscreen. `#3` deep-links to slide 3. Slides that overflow 1280×720 are
+flagged in the console.
 
-Copy formula: an assertion as the title, at most two lines of support, no
-paragraph. One idea per slide; if a slide needs a second idea, split it.
+Variations: pitch (problem/insight/proof/ask), class (one concept per slide),
+readout (data first). Copy formula: an assertion as the title, at most two lines
+of support, no paragraph. One idea per slide.
 
-Forno & Brasa snippet:
+Example: Slide 1 **“O método importa mais que a ferramenta.”** Slide 4
+**+[placeholder]%** no período [placeholder] · base [placeholder].
 
-> Slide 1: **O forno não é cenário. É o método.**
-> Slide 4: **+[placeholder]%** de pedidos no fim de semana · base
-> [placeholder — período e canal].
+## social — interrompe
 
-## social — interrupts
+Three real-size mockups: 1080×1080 feed, 1080×1920 story and 1080×1350 image.
+They are **mockups, not PNG/JPG export**; the user composes or captures them in
+the destination app. Keep the logo legible, the headline short and the CTA in the
+lower third (feed) or above the story UI safe zone.
 
-Two real-size HTML mockups: 1080×1080 feed and 1080×1920 story. They are
-**reference mockups, not PNG/JPG export**; the user composes or captures them in
-the destination app. Keep the logo legible, the headline short and the CTA in
-the lower third (feed) or above the story UI safe zone.
+Variations: single statement, carousel cover, quote card, date/event card. Copy
+formula: one idea per frame; at most one CTA; no paragraph. A square post has one
+headline and one support line; a story is a 1–3 screen sequence, one idea per
+screen.
 
-Copy formula: one idea per frame; at most one CTA; no paragraph. A square post
-has one headline and one support line. A story is a 1–3 screen sequence, one
-idea per screen.
+Example: **“A mostra fecha domingo.”** · [placeholder — horário] · [placeholder
+— @perfil]. Story 1/3 **“Uma sala, seis décadas.”** Story 2/3 **“Entrada
+[placeholder].”** Story 3/3 **“Últimos dias.”**
 
-Forno & Brasa snippet:
+## app — opera
 
-> **Hoje tem forno a lenha.**
-> [placeholder — sabor do dia] · [placeholder — horário] · [placeholder —
-> @perfil]
-> Story 1/3: **A massa começou ontem.** Story 2/3: **O forno acendeu às
-> [placeholder].** Story 3/3: **Peça até [placeholder].**
+Default shell: topbar with mobile disclosure, sidebar on desktop, page header,
+stats, table/list with filters, empty/loading/error states, a chart with a table
+fallback, a native `<dialog>` modal and a form. Same tokens, more compact rhythm
+for the context; **no product flavor** and no fake product name.
+
+- A11y: landmarks, a skip link, keyboard access, visible focus, `<dialog>` for
+  modal focus trapping, labels on every control.
+- The layout is a starter: a settings page may drop stats and the chart; a
+  dashboard may promote the trend. Keep the operational job and the states.
+- No decorative logo sprite in `app`; the lockup is inline in the topbar. The
+  checker accepts the format without the sprite and breathing-area comment.
 
 ## blank — the shell
 
-Use `blank` when the user needs a page that is not one of the four marketing
-formats. It carries the logo, `h1`, purpose, attribute chips and theme toggle,
-with no invented sections. Build the rest with semantic tokens and run the
-checker.
+Use `blank` for a cartaz, convite, menu, cheatsheet, certificate or any page that
+is not one of the application formats. It carries the logo, `h1`, purpose,
+attribute chips and theme toggle, with no invented sections. Build the rest with
+semantic tokens, compose from the section catalog and run the checker.
 
 ## Cross-format checklist
 
-- [ ] One format job respected: sells / explains / presents / interrupts.
-- [ ] Copy is not duplicated across formats; angle changes with the job.
-- [ ] Every number has a source or is `[placeholder]`.
+- [ ] The format job is respected: vende / explica / apresenta / interrompe /
+      opera / prova / governa.
+- [ ] The skeleton was treated as a starting point, not a mold; sections were
+      composed for this argument.
+- [ ] Composition direction, measure and grid guided the layout.
+- [ ] Copy is not duplicated across formats; the angle changes with the job.
+- [ ] Every number has a base and date, or is `[placeholder]`.
 - [ ] Every placeholder is listed in the delivery **Nota**.
 - [ ] `check_page.py` reports zero ERROR on the file.
 - [ ] 375px has no horizontal scroll; light/dark and keyboard were checked.
-- [ ] Social files are described as mockups, not image exports.
+- [ ] Deck overflow and social safe zones were checked; social is described as a
+      mockup, not an export.

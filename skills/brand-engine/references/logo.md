@@ -3,12 +3,13 @@
 The logo is the one asset that must survive the smallest and the darkest place it
 appears. Resolve it in **cascade order C → B → A**, test at **16px**, and stop at
 the first variant that passes. `brand.json` records the result in
-`logo.variant` (`"C"`, `"B"` or `"A"`).
+`design.logo.variant` (`"C"`, `"B"` or `"A"`).
 
 The generator does not draw final geometry. `new_page.py` writes a placeholder
-`#be-mark` sprite and a lockup built from the chosen variant; you replace that
-symbol's paths with the approved geometry and keep the id. Deliver the chosen
-logo as `logo.svg` in the working directory, never inside the skill.
+`#be-mark` sprite and a lockup built from the chosen variant; replace the
+symbol's paths with the approved geometry and keep the id. The `app` format uses
+an inline lockup in the topbar and no sprite. Deliver the chosen logo as
+`logo.svg` in the working directory, never inside the skill.
 
 ## Cascade
 
@@ -50,9 +51,10 @@ dark**, at 100% and 200% zoom. Render 16/24/48px samples before approving.
 - If a shape closes up, a counter fills in, two shapes merge or the mark becomes
   a blob, the variant fails.
 - If C fails, degrade to B (monogram). If B is still ambiguous, degrade to A
-  (wordmark). Explain the change in one line and record it in `logo.variant`.
-- Never shrink below 16px. For a favicon, use the symbol or monogram at 16px;
-  do not add a smaller size.
+  (wordmark). Explain the change in one line and record it in
+  `design.logo.variant`.
+- Never shrink below 16px. For a favicon, use the symbol or monogram at 16px; do
+  not add a smaller size.
 - The manual shows 16px, 24px and 48px with the breathing area marked.
 
 ## Construction and SVG rules
@@ -68,23 +70,24 @@ dark**, at 100% and 200% zoom. Render 16/24/48px samples before approving.
 - Standalone `logo.svg` gets `role="img"` and a `<title>` with the brand name.
   The inline sprite `<symbol id="be-mark">` stays presentational (no title) and
   is referenced with `<use href="#be-mark">`.
-- The sprite is the first element inside `<body>` in every generated page; keep
-  the id `be-mark` when you replace the placeholder path.
-- The wordmark uses the approved display stack. In generated pages it is a
-  `span`; in `logo.svg`, outline it or keep a live `text` with the same stack so
-  it travels.
+- The sprite is the first element inside `<body>` in every generated page except
+  `app`; keep the id `be-mark` when you replace the placeholder path.
+- The wordmark uses the approved display stack (`--b-display`). In generated
+  pages it is a `span`; in `logo.svg`, outline it or keep a live `text` with the
+  same stack so it travels.
 
 ## Breathing area = S
 
-Keep clear space equal to **S = 8px = `--b-space-1`** on all four sides. Nothing
-enters that area: no text, border, image edge or another logo. Apply it as
-padding/margin in layout, not as a visible box. The height S is the same unit
-used by the 8px grid, so the logo aligns with the rest of the page.
+Keep clear space equal to **S = one spacing unit = `--b-space-1`**: 8px when
+`design.shape.unit` is `8`, 4px when it is `4`. Nothing enters that area: no
+text, border, image edge or another logo. Apply it as padding/margin in layout,
+not as a visible box. S uses the same unit as the grid, so the logo aligns with
+the rest of the page on both configurations.
 
 ## Light and dark
 
 `currentColor` is the strategy for the symbol: each placement chooses a token
-with a guarantee — `text-fg` on canvas and surface, `text-on-band` on the dark
+with a guarantee — `text-fg` on canvas and surface, `text-on-band` on the brand
 band, `text-accent` where the nav uses the accent. A monogram tile uses
 `bg-primary` + `text-on-primary`. Test light and dark without editing the SVG.
 If contrast fails, move the logo to a token with a guarantee (`text-fg`,
@@ -106,35 +109,40 @@ Document all of these in the manual; the checker looks for the four terms.
 ## Detailed idea — degrade, do not trace
 
 If the user pastes a **detailed or illustrative** logo idea (many shapes, fine
-lines, gradients, text inside the mark, a literal oven with bricks), it will not
-survive 16px. Do not trace it into the symbol and do not promise it will work.
+lines, gradients, text inside the mark, a literal scene), it will not survive
+16px. Do not trace it into the symbol and do not promise it will work.
 
 1. Say in one line that the idea cannot survive 16px.
 2. **Degrade** to B (monogram) or A (wordmark), in that order.
-3. Record `logo.variant` and explain the change in the delivery **Nota**.
+3. Record `design.logo.variant` and explain the change in the delivery **Nota**.
 
 A detailed illustration can still live as an illustration elsewhere; it is not
 the logo.
 
-## Worked example — Forno & Brasa
+## Worked example — Omnia Labs
 
-The approved idea is **Chama**: a flame plus the oven arch, two shapes, one
-angle family, `currentColor`. That is C: symbol + “Forno & Brasa” wordmark.
+The approved idea is **Colchete**: two brackets around a block, two shapes, one
+angle family, `currentColor`. That is C: symbol + “Omnia Labs” wordmark.
 
-- At 16px the flame's inner curve starts to merge, so the nav/favicon uses the
-  **B monogram “FB”**; the landing header may still use C above 24px.
-- If the client's real idea is a detailed brick oven with many lines, **degrade**
-  to A: the wordmark “Forno & Brasa” in Fraunces, no symbol.
-- Keep S = 8px around every variant and test on `canvas`, `surface` and `band`.
+- At 16px the block and one bracket start to merge, so the nav/favicon uses the
+  **B monogram “OL”**; the landing header may still use C above 24px.
+- If the client's real idea is a detailed circuit board with many lines,
+  **degrade** to A: the wordmark “Omnia Labs” in Newsreader, no symbol.
+- Keep S = one spacing unit (`--b-space-1`) around every variant and test on
+  `canvas`, `surface` and `band`.
 
 ## Logo checklist
 
 - [ ] Variant chosen by the cascade, not by preference: C → B → A.
 - [ ] Recognizable at 16px on light and dark; 16/24/48px samples checked.
 - [ ] Two or three shapes, one idea, no text inside the symbol.
-- [ ] Symbol is one color via `currentColor`; a monogram tile is a single solid brand fill (`bg-primary` + `text-on-primary` in HTML). No hex, gradient, shadow or filter.
+- [ ] Symbol is one color via `currentColor`; a monogram tile is a single solid
+      brand fill (`bg-primary` + `text-on-primary` in HTML). No hex, gradient,
+      shadow or filter.
 - [ ] `viewBox` square; `role`/`<title>` on standalone SVG; `#be-mark` kept in
-      the sprite.
-- [ ] Breathing area S = 8px (`--b-space-1`) on all sides.
-- [ ] Misuses documented: recolor, rotate, stretch, replace, shadow, low contrast.
+      the sprite (inline lockup in `app`).
+- [ ] Breathing area S = `--b-space-1` (4px on unit 4, 8px on unit 8) on all
+      sides.
+- [ ] Misuses documented: recolor, rotate, stretch, replace, shadow, low
+      contrast.
 - [ ] A detailed idea degraded to monogram or wordmark with a written reason.
