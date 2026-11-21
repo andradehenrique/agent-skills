@@ -58,8 +58,29 @@ def content_classes(html: str) -> list[str]:
 
 
 def generate(fmt: str, out: str | Path, **kwargs: object) -> str:
+    """Generate a page and return its HTML; ``new_page`` returns the path."""
+
     mod = generator()
-    return mod.new_page(fmt, SAMPLE_BRAND, "Forno & Brasa", out, **kwargs)
+    path = mod.new_page(fmt, SAMPLE_BRAND, "Forno & Brasa", out, **kwargs)
+    assert isinstance(path, Path), f"new_page must return a path, got {type(path)}"
+    return path.read_text(encoding="utf-8")
+
+
+def test_new_page_returns_the_written_path() -> None:
+    mod = generator()
+    with tempfile.TemporaryDirectory() as tmp:
+        path = mod.new_page("blank", SAMPLE_BRAND, "Forno & Brasa", tmp)
+        assert isinstance(path, Path)
+        assert path == Path(tmp) / "blank.html"
+        assert path.is_file()
+        assert "<svg><symbol" in path.read_text(encoding="utf-8")
+
+        target = Path(tmp) / "custom.html"
+        returned = mod.new_page("blank", SAMPLE_BRAND, "Outro título", target, force=True)
+        assert isinstance(returned, Path)
+        assert not isinstance(returned, str)
+        assert returned == target
+        assert returned.is_file()
 
 
 def test_generates_six_formats_with_sprite_and_no_hex() -> None:
@@ -157,9 +178,10 @@ def test_every_page_has_one_main_one_h1_and_accessible_tables() -> None:
 def test_titles_and_brand_copy_are_escaped() -> None:
     mod = generator()
     with tempfile.TemporaryDirectory() as tmp:
-        html = mod.new_page(
+        path = mod.new_page(
             "blank", SAMPLE_BRAND, 'Forno & <Brasa> "x"', tmp, force=True
         )
+        html = path.read_text(encoding="utf-8")
         assert "<title>Forno &amp; &lt;Brasa&gt; &quot;x&quot;</title>" in html
         assert "<h1" in html and "Forno &amp; &lt;Brasa&gt;" in html
         assert "<Brasa>" not in html
@@ -211,7 +233,6 @@ def test_refuses_overwrite_without_force() -> None:
         forced = target.read_text(encoding="utf-8")
         assert forced != before
         assert "Outro título" in forced
-
 
 def test_cli_writes_page_and_explains_errors() -> None:
     with tempfile.TemporaryDirectory() as tmp:

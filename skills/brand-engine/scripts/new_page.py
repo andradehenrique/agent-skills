@@ -31,12 +31,12 @@ Token rules inherited from Task 2 (binding):
 
 Public API::
 
-    new_page(fmt, brand, title, out, theme="light", force=False) -> html
+    new_page(fmt, brand, title, out, theme="light", force=False) -> Path
 
 ``brand`` is a ``brand.json`` path. ``out`` is either an ``.html`` file path or
-a directory (the file is then ``<fmt>.html``). The rendered HTML string is
-returned (the on-disk path is ``out`` or ``out/<fmt>.html``). Existing files
-are never replaced without ``force=True`` (CLI ``--force``).
+a directory (the file is then ``<fmt>.html``). The path of the written file is
+returned; use ``render_page()`` when you need the HTML string without I/O.
+Existing files are never replaced without ``force=True`` (CLI ``--force``).
 
 CLI::
 
@@ -596,8 +596,8 @@ def new_page(
     out: str | Path,
     theme: str = "light",
     force: bool = False,
-) -> str:
-    """Render and write one format; return the HTML string.
+) -> Path:
+    """Render and write one format; return the path of the written file.
 
     ``out`` is an ``.html`` path or a directory (``<fmt>.html`` is written).
     """
@@ -616,7 +616,7 @@ def new_page(
         )
     destination.parent.mkdir(parents=True, exist_ok=True)
     destination.write_text(page, encoding="utf-8")
-    return page
+    return destination
 
 
 def main(argv: list[str] | None = None) -> int:
