@@ -1,25 +1,27 @@
 #!/usr/bin/env python3
-"""Brand Engine page generator: one self-contained HTML file per format.
+"""Brand Engine v2 page generator: one self-contained HTML file per format.
 
-Reads the approved ``brand.json``, reuses the Task 2 theme builder, and writes
-a single-file page. Formats and their job:
+Reads the approved ``brand.json`` v2, reuses the theme builder, and writes a
+single-file starter page. Formats and their job:
 
-``manual``   brand manual (the approval artifact)
-``onepage``  landing page: hero, proof, CTA
-``deck``     1280x720 container-query slides with keyboard navigation
-``report``   long-form report with tables that carry ``caption`` and ``th``
-``social``   1080x1080 and 1080x1920 HTML mockups (reference, not an export)
-``blank``    the shell with logo, title and theme toggle
+``manual``     brand manual (the approval artifact and gate)
+``onepage``    landing page: hero, proof, reasons, CTA
+``deck``       1280x720 container-query slides with keyboard navigation
+``report``     long-form report with accessible tables and one chart
+``social``     1080x1080 and 1080x1920 HTML mockups (reference, not export)
+``app``        application shell: topbar, sidebar, stats, list, states, form
+``brand-kit``  living proof of the system plus the mini cases
+``blank``      the shell with logo, title and theme toggle
 
-Every page embeds the same pieces, in this order:
+Every page embeds, in this order:
 
 1. a ``<head>`` with the pinned Tailwind CDN, Google Fonts link, generated
-   ``theme.css`` (``--b-*`` tokens, light/dark), the no-flash theme script,
-   and ``tailwind-theme.css`` (semantic utilities);
+   ``theme.css`` (``--b-*`` tokens, optional light/dark), the no-flash theme
+   script, and ``tailwind-theme.css`` (semantic utilities);
 2. the logo sprite as ``<svg><symbol ...>`` at the very top of ``<body>``;
 3. the per-format skeleton.
 
-Token rules inherited from Task 2 (binding):
+Token rules inherited from the theme builder (binding):
 
 - body text uses ``text-fg`` / ``text-fg-muted`` / ``text-link``, never
   ``text-primary``;
@@ -27,16 +29,30 @@ Token rules inherited from Task 2 (binding):
   ``hover:bg-primary-hover``;
 - control boundaries use ``border-line-input``; ``border-line`` and
   ``border-line-strong`` are decorative;
-- the only gradient is ``bg-grad-brand`` (two stops, 50/50, 45deg).
+- the only gradient is ``bg-grad-brand`` and only when the brand defines one.
+
+External CDNs are conditional:
+
+- Iconify (``<iconify-icon>``) only on formats whose skeletons use it;
+- Chart.js only on ``report``, ``app`` and ``brand-kit``, the formats with a
+  ``<canvas>``;
+- ``placehold.co`` for image placeholders, with the brand colours and a
+  ``data-placehold-dark`` variant when the brand has both modes.
 
 Public API::
 
-    new_page(fmt, brand, title, out, theme="light", force=False) -> Path
+    new_page(fmt, brand, title, out, theme=None, force=False) -> Path
+    render_page(fmt, brand, title, theme=None) -> str
 
-``brand`` is a ``brand.json`` path. ``out`` is either an ``.html`` file path or
-a directory (the file is then ``<fmt>.html``). The path of the written file is
-returned; use ``render_page()`` when you need the HTML string without I/O.
-Existing files are never replaced without ``force=True`` (CLI ``--force``).
+``brand`` is a ``brand.json`` path (``new_page``) or the raw dict returned by
+``build_theme.load_brand`` (``render_page``). ``out`` is either an ``.html``
+file path or a directory (the file is then ``<fmt>.html``). Existing files are
+never replaced without ``force=True`` (CLI ``--force``).
+
+``theme`` accepts ``light|dark|system|light-only|dark-only``: ``system`` only
+when the brand has both modes, ``*-only`` only when that mode exists. ``None``
+follows ``design.theme.default``. Single-mode brands are locked and render no
+toggle.
 
 CLI::
 
@@ -51,8 +67,10 @@ from __future__ import annotations
 
 import argparse
 import html
+import json
 import re
 import sys
+import unicodedata
 from pathlib import Path
 from urllib.parse import quote_plus
 
@@ -68,9 +86,29 @@ HERE = Path(__file__).resolve().parent
 ASSETS = HERE.parent / "assets"
 SKELETONS = ASSETS / "skeletons"
 
-FORMATS = ("manual", "onepage", "deck", "report", "social", "blank")
+FORMATS = (
+    "manual",
+    "onepage",
+    "deck",
+    "report",
+    "social",
+    "app",
+    "brand-kit",
+    "blank",
+)
+
 THEMES = ("light", "dark", "system", "light-only", "dark-only")
+DEFAULT_THEME_MODES = ("light", "dark")
+
+# Formats whose skeletons actually render ``<iconify-icon>``. Deck and social
+# use inline SVG only, so they do not need the ~24KB CDN component.
+FORMAT_ICONS = frozenset({"manual", "onepage", "report", "app", "brand-kit"})
+# Formats with a <canvas> and a BrandCharts call in the skeleton.
+FORMAT_CHARTS = frozenset({"report", "app", "brand-kit"})
+
 TAILWIND_VERSION = "4.3.3"  # pinned @tailwindcss/browser; test before bumping
+ICONIFY_VERSION = "3.0.0"  # pinned iconify-icon web component
+CHARTJS_VERSION = "4.4.7"  # pinned Chart.js UMD build
 
 # Deterministic opposites for the manual's NÃO SOMOS column. Unknown
 # attributes stay an explicit placeholder instead of an invented word.
@@ -110,6 +148,22 @@ ANTONYMS = {
     "tímido": "exagerado",
 }
 
+DIRECTION_NOTES = {
+    "editorial": "manchete grande, coluna de leitura e imagens com respiro",
+    "structured": "grid explícito, blocos alinhados e densidade média",
+    "poster": "tipografia grande, contraste alto e poucos elementos",
+    "minimal": "muito espaço, hierarquia por peso e posição",
+}
+
+ROLE_LABELS = {
+    "canvas": "fundo",
+    "surface": "superfície",
+    "ink": "texto",
+    "primary": "ação",
+    "accent": "destaque",
+    "support": "apoio",
+}
+
 THEME_JS = """(function () {
   var root = document.documentElement;
   var KEY = "be-theme";
@@ -124,6 +178,19 @@ THEME_JS = """(function () {
     if (d === "system") return matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
     return d === "dark" ? "dark" : "light";
   }
+  function swapPlaceholders(t) {
+    var imgs = document.querySelectorAll("img[data-placehold-dark]");
+    for (var j = 0; j < imgs.length; j++) {
+      var img = imgs[j];
+      if (!img.getAttribute("data-placehold-light")) {
+        img.setAttribute("data-placehold-light", img.getAttribute("src") || "");
+      }
+      var next = t === "dark"
+        ? img.getAttribute("data-placehold-dark")
+        : img.getAttribute("data-placehold-light");
+      if (next) img.setAttribute("src", next);
+    }
+  }
   function apply(t) {
     root.setAttribute("data-theme", t);
     var btns = document.querySelectorAll("[data-theme-toggle]");
@@ -132,6 +199,7 @@ THEME_JS = """(function () {
       btns[i].setAttribute("aria-label", "Alternar tema claro/escuro");
       btns[i].setAttribute("title", "Alternar tema claro/escuro");
     }
+    swapPlaceholders(t);
   }
   apply(initial());
   window.beToggleTheme = function () {
@@ -261,6 +329,8 @@ SPRITE = (
     "</div>"
 )
 
+_ICONS_CACHE: dict | None = None
+
 
 def _esc(value: object) -> str:
     return html.escape(str(value), quote=True)
@@ -274,16 +344,52 @@ def _read(rel: str) -> str:
     return (ASSETS / rel).read_text(encoding="utf-8")
 
 
-def _font_links(brand: dict) -> str:
+def _iconify_script() -> str:
+    return (
+        f'<script src="https://cdn.jsdelivr.net/npm/iconify-icon@{ICONIFY_VERSION}'
+        '/dist/iconify-icon.min.js"></script>'
+    )
+
+
+def _chart_script() -> str:
+    helper = _read("brand-charts.js").strip()
+    return (
+        f'<script src="https://cdn.jsdelivr.net/npm/chart.js@{CHARTJS_VERSION}'
+        '/dist/chart.umd.min.js"></script>\n'
+        "<script>\n" + helper + "\n</script>"
+    )
+
+
+def _icons_doc() -> dict:
+    global _ICONS_CACHE
+    if _ICONS_CACHE is None:
+        _ICONS_CACHE = json.loads(_read("icons.json"))
+    return _ICONS_CACHE
+
+
+def _icon_name(brand: dict, semantic: str) -> str:
+    family = brand["design"]["icons"]["family"]
+    entry = _icons_doc()["icons"].get(semantic, {})
+    return entry.get(family) or entry.get("fluent") or f"{family}:{semantic}"
+
+
+def _font_families(brand: dict) -> list[str]:
     families: list[str] = []
+    type_block = brand["design"]["type"]
     for role in ("display", "body"):
-        family = brand["fonts"][role]["family"]
+        family = type_block[role]["family"]
         if family not in families:
             families.append(family)
+    return families
+
+
+def _font_links(brand: dict) -> str:
     # No weight axis on purpose: single-weight display families reject
     # ``wght@400;600;700`` and would lose the whole stylesheet. The CSS stack
     # from brand.json remains the safety net when a family is not on Google.
-    query = "&".join(f"family={quote_plus(family)}" for family in families)
+    query = "&".join(
+        f"family={quote_plus(family)}" for family in _font_families(brand)
+    )
     return (
         '<link href="https://fonts.googleapis.com/css2?'
         + query
@@ -303,18 +409,26 @@ def _type_scale(theme_css: str) -> list[tuple[str, int, str]]:
     return [(name, size, leadings.get(name, "")) for name, size in sizes]
 
 
-def _color_tokens(theme_css: str) -> dict[str, str]:
-    tokens: dict[str, str] = {}
-    for slug, value in re.findall(
-        r"--b-color-([\w-]+):\s*(#[0-9A-Fa-f]{6});", theme_css
-    ):
-        tokens.setdefault(value.upper(), slug)
-    return tokens
+def _root_colors(theme_css: str) -> dict[str, str]:
+    """Semantic colour tokens from the ``:root`` block (the light/default set)."""
+
+    match = re.search(r":root\s*\{(.*?)\n\}", theme_css, re.S)
+    block = match.group(1) if match else theme_css.split("}", 1)[0]
+    colors: dict[str, str] = {}
+    for name, value in re.findall(r"--b-([a-z0-9-]+):\s*(#[0-9A-Fa-f]{6});", block):
+        colors.setdefault(name, value.upper())
+    return colors
 
 
 def _rgb(value: str) -> str:
     red, green, blue = (int(value[index : index + 2], 16) for index in (1, 3, 5))
     return f"{red} {green} {blue}"
+
+
+def _slugify(name: str) -> str:
+    normalized = unicodedata.normalize("NFKD", name).encode("ascii", "ignore").decode("ascii")
+    slug = re.sub(r"[^a-z0-9]+", "-", normalized.lower()).strip("-")
+    return slug or "color"
 
 
 def _initials(name: str) -> str:
@@ -328,9 +442,7 @@ def _initials(name: str) -> str:
 
 def _mark(size_class: str = "") -> str:
     classes = ("be-mark " + size_class).strip()
-    return (
-        f'<svg class="{classes}" aria-hidden="true"><use href="#be-mark"/></svg>'
-    )
+    return f'<svg class="{classes}" aria-hidden="true"><use href="#be-mark"/></svg>'
 
 
 def _wordmark(name: str) -> str:
@@ -338,9 +450,7 @@ def _wordmark(name: str) -> str:
 
 
 def _monogram(name: str) -> str:
-    return (
-        f'<span class="be-monogram" aria-hidden="true">{_esc(_initials(name))}</span>'
-    )
+    return f'<span class="be-monogram" aria-hidden="true">{_esc(_initials(name))}</span>'
 
 
 def _lockup(variant: str, name: str) -> str:
@@ -350,9 +460,7 @@ def _lockup(variant: str, name: str) -> str:
         inner = _monogram(name)
     else:
         inner = _wordmark(name)
-    return (
-        f'<span class="be-brand" role="img" aria-label="{_esc(name)}">{inner}</span>'
-    )
+    return f'<span class="be-brand" role="img" aria-label="{_esc(name)}">{inner}</span>'
 
 
 def _logo_for_nav(variant: str, name: str) -> str:
@@ -394,61 +502,77 @@ def _logo_size_samples(variant: str, name: str) -> str:
     return "\n        ".join(items)
 
 
-def _color_cards(brand: dict, tokens: dict[str, str]) -> str:
+def _color_entries(brand: dict) -> list[tuple[str, dict]]:
+    block = brand["design"]["colors"]
+    entries: list[tuple[str, dict]] = []
+    for role in ("canvas", "surface", "ink", "primary", "accent"):
+        color = block.get(role)
+        if isinstance(color, dict):
+            entries.append((role, color))
+    for color in block.get("support") or []:
+        if isinstance(color, dict):
+            entries.append(("support", color))
+    return entries
+
+
+def _color_cards(brand: dict) -> str:
     cards: list[str] = []
-    for group in ("primary", "secondary"):
-        for color in brand["colors"][group]:
-            value = color["hex"].upper()
-            slug = tokens.get(value)
-            if slug is None:
-                raise RuntimeError(f"theme.css is missing --b-color-* for {value}")
-            note = color.get("note") or "sem nota"
-            cards.append(
-                "\n".join(
-                    (
-                        '<article class="rounded-lg border border-line bg-surface p-3">',
-                        f'  <div class="be-swatch h-10" style="background-color: var(--b-color-{slug})" '
-                        f'role="img" aria-label="Amostra da cor {_esc(color["name"])}"></div>',
-                        f'  <h3 class="mt-2 text-lg font-semibold">{_esc(color["name"])}</h3>',
-                        '  <dl class="mt-2 space-y-1 text-xs">',
-                        f'    <div class="flex justify-between gap-2"><dt class="text-fg-subtle">HEX</dt>'
-                        f'<dd class="font-medium">{_esc(value)}</dd></div>',
-                        f'    <div class="flex justify-between gap-2"><dt class="text-fg-subtle">RGB</dt>'
-                        f"<dd>{_rgb(value)}</dd></div>",
-                        '    <div class="flex justify-between gap-2"><dt class="text-fg-subtle">Pantone</dt>'
-                        '<dd class="text-right">[placeholder — confirmar]</dd></div>',
-                        f'    <div class="flex justify-between gap-2"><dt class="text-fg-subtle">Token</dt>'
-                        f"<dd>--b-color-{slug}</dd></div>",
-                        "  </dl>",
-                        f'  <p class="mt-2 text-xs text-fg-subtle">{_esc(group)} · {_esc(note)}</p>',
-                        "</article>",
-                    )
+    for role, color in _color_entries(brand):
+        slug = _slugify(color["name"])
+        note = color.get("note") or "sem nota"
+        cards.append(
+            "\n".join(
+                (
+                    '<article class="rounded-lg border border-line bg-surface p-3">',
+                    f'  <div class="be-swatch h-10" style="background-color: var(--b-color-{slug})" '
+                    f'role="img" aria-label="Amostra da cor {_esc(color["name"])}"></div>',
+                    f'  <h3 class="mt-2 text-lg font-semibold">{_esc(color["name"])}</h3>',
+                    '  <dl class="mt-2 space-y-1 text-xs">',
+                    f'    <div class="flex justify-between gap-2"><dt class="text-fg-subtle">HEX</dt>'
+                    f'<dd class="font-medium">{_esc(color["hex"].upper())}</dd></div>',
+                    f'    <div class="flex justify-between gap-2"><dt class="text-fg-subtle">RGB</dt>'
+                    f"<dd>{_rgb(color['hex'].upper())}</dd></div>",
+                    '    <div class="flex justify-between gap-2"><dt class="text-fg-subtle">Pantone</dt>'
+                    '<dd class="text-right">[placeholder — confirmar]</dd></div>',
+                    f'    <div class="flex justify-between gap-2"><dt class="text-fg-subtle">Token</dt>'
+                    f"<dd>--b-color-{slug}</dd></div>",
+                    "  </dl>",
+                    f'  <p class="mt-2 text-xs text-fg-subtle">{_esc(ROLE_LABELS.get(role, role))} · {_esc(note)}</p>',
+                    "</article>",
                 )
             )
+        )
     return "\n        ".join(cards)
 
 
-def _pair_rows(brand: dict) -> str:
-    lookup: dict[str, dict] = {}
-    for group in ("primary", "secondary"):
-        for color in brand["colors"][group]:
-            lookup[color["name"].casefold()] = color
+PAIR_ROLES = (
+    ("canvas", "fg", "texto principal sobre o fundo"),
+    ("surface", "fg", "texto principal sobre o cartão"),
+    ("surface", "fg-muted", "texto secundário"),
+    ("primary", "on-primary", "ação sólida"),
+    ("band", "on-band", "faixa de marca"),
+    ("accent", "on-accent", "destaque sólido"),
+    ("highlight", "on-highlight", "realce"),
+)
 
+
+def _pair_rows(theme_css: str) -> str:
+    colors = _root_colors(theme_css)
     rows: list[str] = []
-    for pair in brand["allowed_pairs"]:
-        background = lookup.get(str(pair["bg"]).casefold())
-        foreground = lookup.get(str(pair["fg"]).casefold())
-        if background is None or foreground is None:
-            raise RuntimeError(f"allowed_pairs references an unknown colour: {pair}")
-        ratio = contrast_ratio(foreground["hex"], background["hex"])
+    for background, foreground, use in PAIR_ROLES:
+        bg = colors.get(background)
+        fg = colors.get(foreground)
+        if not bg or not fg:
+            continue
+        ratio = contrast_ratio(fg, bg)
         verdict = "AA" if ratio >= 4.5 else ("AA (texto grande)" if ratio >= 3.0 else "Falha AA")
         rows.append(
             "<tr>"
-            f'<td class="font-medium">{_esc(background["name"])}</td>'
-            f"<td>{_esc(foreground['name'])}</td>"
+            f'<td class="font-medium">--b-{background}</td>'
+            f"<td>--b-{foreground}</td>"
             f'<td class="tabular-nums">{ratio:.2f}:1</td>'
             f"<td>{verdict}</td>"
-            f'<td>{_esc(pair.get("use") or "—")}</td>'
+            f"<td>{_esc(use)}</td>"
             "</tr>"
         )
     return "\n            ".join(rows)
@@ -488,31 +612,338 @@ def _chips(attributes: list[str]) -> str:
     )
 
 
-def _theme_parts(theme: str) -> tuple[str, str]:
+def _icon_samples(brand: dict) -> str:
+    family = brand["design"]["icons"]["family"]
+    size = brand["design"]["icons"]["size"]
+    samples = (
+        ("home", "início"),
+        ("search", "busca"),
+        ("settings", "ajustes"),
+        ("users", "pessoas"),
+        ("chart-line", "dados"),
+        ("calendar", "agenda"),
+    )
+    cards: list[str] = []
+    for semantic, label in samples:
+        name = _icon_name(brand, semantic)
+        cards.append(
+            "\n".join(
+                (
+                    '<div class="rounded-lg border border-line bg-surface p-4">',
+                    f'  <p class="flex items-center gap-2 text-sm font-medium">',
+                    f'    <iconify-icon icon="{_esc(name)}" width="{size}" height="{size}"'
+                    ' aria-hidden="true" class="text-lg text-fg-muted"></iconify-icon>',
+                    f"    {_esc(label)}",
+                    "  </p>",
+                    f'  <code class="mt-2 block text-xs text-fg-subtle">{_esc(name)}</code>',
+                    "</div>",
+                )
+            )
+        )
+    cards.append(
+        "\n".join(
+            (
+                '<div class="rounded-lg border border-line bg-surface p-4">',
+                '  <p class="text-xs font-semibold uppercase tracking-widest text-fg-subtle">Família</p>',
+                f'  <p class="mt-2 text-lg font-semibold">{_esc(family)}</p>',
+                f'  <code class="mt-2 block text-xs text-fg-subtle">design.icons.family</code>',
+                "</div>",
+            )
+        )
+    )
+    return "\n        ".join(cards)
+
+
+def _chart_swatches() -> str:
+    return "\n        ".join(
+        f'<div class="h-10 w-10 rounded-md bg-chart-{index}" role="img" '
+        f'aria-label="chart-{index}"></div>'
+        for index in range(1, 9)
+    )
+
+
+def _feedback_cards(brand: dict) -> str:
+    roles = (
+        ("success", "Sucesso", "check-circle", "confirmação com o próximo passo"),
+        ("warning", "Atenção", "alert-triangle", "o risco e como evitá-lo"),
+        ("danger", "Erro", "alert-circle", "o que falhou e o que fazer agora"),
+        ("info", "Informação", "info", "contexto que evita uma dúvida"),
+    )
+    cards: list[str] = []
+    for role, label, semantic, note in roles:
+        icon = _icon_name(brand, semantic)
+        cards.append(
+            "\n".join(
+                (
+                    f'<div class="rounded-lg bg-{role}-soft p-3">',
+                    f'  <p class="flex items-center gap-2 text-sm font-semibold text-on-{role}-soft">',
+                    f'    <iconify-icon icon="{_esc(icon)}" aria-hidden="true"'
+                    f' class="text-base text-{role}"></iconify-icon>',
+                    f"    {label}",
+                    "  </p>",
+                    f'  <p class="mt-1 text-sm text-fg-muted">[placeholder — {_esc(note)}.]</p>',
+                    f'  <code class="mt-2 block text-xs text-fg-subtle">bg-{role}-soft · text-on-{role}-soft</code>',
+                    "</div>",
+                )
+            )
+        )
+    return "\n        ".join(cards)
+
+
+def _component_samples(brand: dict) -> str:
+    info_icon = _icon_name(brand, "info")
+    return "\n        ".join(
+        (
+            "\n".join(
+                (
+                    '<div class="rounded-lg border border-line bg-surface p-4">',
+                    '  <h3 class="text-lg font-semibold">Ações</h3>',
+                    '  <div class="mt-3 flex flex-wrap items-center gap-2">',
+                    '    <button type="button" class="inline-flex h-6 items-center rounded-md bg-primary px-3 text-sm font-semibold text-on-primary hover:bg-primary-hover">Primária</button>',
+                    '    <button type="button" class="inline-flex h-6 items-center rounded-md border border-line-input bg-surface px-3 text-sm font-semibold text-fg hover:bg-surface-muted">Secundária</button>',
+                    '    <a href="#componentes" class="text-sm text-link">Ação terciária</a>',
+                    "  </div>",
+                    "</div>",
+                )
+            ),
+            "\n".join(
+                (
+                    '<div class="rounded-lg border border-line bg-surface p-4">',
+                    '  <h3 class="text-lg font-semibold">Campos</h3>',
+                    '  <label for="manual-campo" class="mt-3 block text-sm font-medium">[placeholder — rótulo do campo]</label>',
+                    '  <input id="manual-campo" name="campo" type="text" class="mt-1 h-6 w-full rounded-md border border-line-input bg-surface px-2 text-sm text-fg">',
+                    '  <p class="mt-1 text-xs text-fg-subtle">[placeholder — ajuda curta, sempre visível.]</p>',
+                    "</div>",
+                )
+            ),
+            "\n".join(
+                (
+                    '<div class="rounded-lg bg-info-soft p-3">',
+                    '  <p class="flex items-center gap-2 text-sm font-semibold text-on-info-soft">',
+                    f'    <iconify-icon icon="{_esc(info_icon)}" aria-hidden="true" class="text-base text-info"></iconify-icon>',
+                    "    Callout",
+                    "  </p>",
+                    '  <p class="mt-1 text-sm text-fg-muted">[placeholder — contexto que muda a decisão de quem lê.]</p>',
+                    "</div>",
+                )
+            ),
+            "\n".join(
+                (
+                    '<div class="rounded-lg border border-line bg-surface p-4">',
+                    '  <h3 class="text-lg font-semibold">Etiquetas e estados</h3>',
+                    '  <div class="mt-3 flex flex-wrap items-center gap-2">',
+                    '    <span class="rounded-full bg-primary-soft px-2 py-1 text-xs font-medium text-on-primary-soft">Etiqueta</span>',
+                    '    <span class="rounded-full bg-success-soft px-2 py-1 text-xs font-medium text-on-success-soft">Concluído</span>',
+                    '    <span class="rounded-full border border-line px-2 py-1 text-xs text-fg-muted">Neutra</span>',
+                    "  </div>",
+                    '  <p class="mt-3 text-sm text-fg-muted">[placeholder — use estado só quando algo muda.]</p>',
+                    "</div>",
+                )
+            ),
+        )
+    )
+
+
+def _composition_rules(brand: dict) -> str:
+    composition = brand["design"]["composition"]
+    direction = composition["direction"]
+    cards = (
+        (
+            "Direção",
+            direction,
+            DIRECTION_NOTES.get(direction, "derive a composição da rota aprovada"),
+        ),
+        ("Medida", composition["measure"], "largura máxima de leitura; não estique o texto"),
+        ("Grid", composition["grid"], "colunas do desktop; no celular, uma coluna"),
+    )
+    return "\n        ".join(
+        "\n".join(
+            (
+                '<div class="rounded-lg border border-line bg-surface p-4">',
+                f'  <p class="text-xs font-semibold uppercase tracking-widest text-fg-subtle">{_esc(title)}</p>',
+                f'  <p class="mt-2 text-lg font-semibold">{_esc(value)}</p>',
+                f'  <p class="mt-1 text-sm text-fg-muted">{_esc(note)}.</p>',
+                "</div>",
+            )
+        )
+        for title, value, note in cards
+    )
+
+
+def _application_cards(brand: dict) -> str:
+    applications = (
+        ("onepage", "Landing page", "promessa, prova e uma ação"),
+        ("report", "Relatório", "conclusão primeiro, tabela e gráfico de apoio"),
+        ("deck", "Apresentação", "uma ideia por slide, tipo grande"),
+        ("app", "App", "topbar, sidebar, lista, estados e formulário"),
+        ("social", "Social", "mockup quadrado e vertical, não export"),
+        ("brand-kit", "Brand kit", "a prova viva do sistema e o menu de formatos"),
+    )
+    cards: list[str] = []
+    for fmt, title, job in applications:
+        cards.append(
+            "\n".join(
+                (
+                    f'<article data-application="{fmt}" class="rounded-lg border border-line bg-surface p-4">',
+                    f'  <h3 class="text-lg font-semibold">{_esc(title)}</h3>',
+                    f'  <p class="mt-1 text-sm text-fg-muted">{_esc(job)}.</p>',
+                    f'  <code class="mt-3 block text-xs text-fg-subtle">--format {fmt}</code>',
+                    "</article>",
+                )
+            )
+        )
+    return "\n        ".join(cards)
+
+
+def _placehold(width: int, height: int, text: str, bg: str, fg: str) -> str:
+    """A placehold.co URL with brand colours (hex without the leading ``#``)."""
+
+    return (
+        f"https://placehold.co/{width}x{height}/"
+        f"{bg.lstrip('#').upper()}/{fg.lstrip('#').upper()}"
+        f"?text={quote_plus(text)}"
+    )
+
+
+def _image_sample(brand: dict) -> str:
+    design = brand["design"]
+    colors = design["colors"]
+    canvas = colors["canvas"]["hex"]
+    ink = colors["ink"]["hex"]
+    primary = colors["primary"]["hex"]
+    imagery = design["imagery"]
+    theme = design["theme"]
+    modes = tuple(theme.get("modes") or DEFAULT_THEME_MODES)
+    both = "light" in modes and "dark" in modes
+
+    alt = (
+        f"Imagem de exemplo — {imagery.get('treatment') or imagery.get('mode') or 'marca'}"
+    )
+    light_url = _placehold(1200, 800, "imagem da marca", canvas, primary)
+
+    if both:
+        dark_url = _placehold(1200, 800, "imagem da marca", ink, canvas)
+        initial_dark = (theme.get("default") or "light") == "dark"
+        src = dark_url if initial_dark else light_url
+        attrs = (
+            f' data-placehold-light="{_esc(light_url)}"'
+            f' data-placehold-dark="{_esc(dark_url)}"'
+        )
+    else:
+        src = light_url
+        attrs = ""
+
+    return "\n".join(
+        (
+            '<figure class="rounded-lg border border-line bg-surface p-3">',
+            f'  <img src="{_esc(src)}"{attrs} alt="{_esc(alt)}" '
+            'class="block h-auto w-full rounded-md" width="1200" height="800" loading="lazy">',
+            '  <figcaption class="mt-2 text-xs text-fg-subtle">'
+            "[placeholder — troque pelo asset real; a nota de entrega lista os placeholders.]"
+            "</figcaption>",
+            "</figure>",
+        )
+    )
+
+
+def _gradient_section(brand: dict) -> str:
+    gradient = brand["design"]["theme"].get("gradient")
+    if not gradient:
+        return ""
+    angle = gradient.get("angle", 45)
+    stops = "três stops" if gradient.get("via") else "dois stops"
+    return "\n".join(
+        (
+            '<div class="mt-8">',
+            '  <h3 class="text-xl font-semibold">Gradiente</h3>',
+            '  <p class="mt-2 max-w-3xl text-sm text-fg-muted">'
+            f"Único gradiente aprovado: {stops} em {float(angle):g}°. Use "
+            '<code class="text-link">bg-grad-brand</code>; qualquer outro gradiente é um desvio.</p>',
+            '  <div class="mt-3 h-20 rounded-lg bg-grad-brand" role="img" '
+            'aria-label="Amostra do gradiente da marca"></div>',
+            '  <p class="mt-2 text-xs text-fg-subtle"><code class="text-link">bg-grad-brand</code> · '
+            '<code class="text-link">--b-gradient</code></p>',
+            "</div>",
+        )
+    )
+
+
+def _theme_parts(theme: str | None, brand: dict) -> tuple[str, str, str, str | None]:
+    """Resolve ``(default, lock_attr, toggle_html, initial_mode)`` for the page."""
+
+    block = brand["design"]["theme"]
+    modes = tuple(block.get("modes") or DEFAULT_THEME_MODES)
+    default = block.get("default") or ("light" if "light" in modes else modes[0])
+    if theme is None:
+        theme = default
+
+    if not isinstance(theme, str) or theme not in THEMES:
+        raise ValueError(f"unknown theme {theme!r} (choose from {', '.join(THEMES)})")
+
+    both = "light" in modes and "dark" in modes
+
+    if theme == "system":
+        if not both:
+            raise ValueError(
+                "theme 'system' needs a brand with both light and dark modes "
+                f"(this brand has: {', '.join(modes)})"
+            )
+        return "system", "", THEME_TOGGLE, None
+
     if theme.endswith("-only"):
-        mode = theme.split("-")[0]
-        return mode, f' data-theme-lock="{mode}"'
-    return theme, ""
+        mode = theme[: -len("-only")]
+        if mode not in modes:
+            raise ValueError(
+                f"theme {theme!r} is not available: brand modes are {', '.join(modes)}"
+            )
+        return mode, f' data-theme-lock="{mode}"', "", mode
+
+    if theme not in modes:
+        raise ValueError(
+            f"theme {theme!r} is not available: brand modes are {', '.join(modes)}"
+        )
+
+    if not both:
+        # A single-mode brand is always locked and renders no toggle.
+        return theme, f' data-theme-lock="{theme}"', "", theme
+
+    return theme, "", THEME_TOGGLE, theme
 
 
-def render_page(fmt: str, brand: dict, title: str, theme: str = "light") -> str:
-    """Render one format from an already loaded brand object."""
+def _set_initial_theme(page: str, mode: str | None) -> str:
+    if mode not in ("light", "dark"):
+        return page
+
+    def replace(match: re.Match[str]) -> str:
+        attrs = match.group(1)
+        if re.search(r"\bdata-theme=", attrs):
+            return match.group(0)
+        return f'<html{attrs} data-theme="{mode}">'
+
+    return re.sub(r"<html\b([^>]*)>", replace, page, count=1)
+
+
+def render_page(fmt: str, brand: dict, title: str, theme: str | None = None) -> str:
+    """Render one format from an already loaded v2 brand object."""
 
     if fmt not in FORMATS:
         raise ValueError(f"unknown format {fmt!r} (choose from {', '.join(FORMATS)})")
-    if theme not in THEMES:
-        raise ValueError(f"unknown theme {theme!r} (choose from {', '.join(THEMES)})")
 
     built = render_theme(brand)
     theme_css = built.theme_css
     tailwind_css = built.tailwind_theme_css
 
+    design = brand["design"]
     name = brand.get("name") or "Brand"
     attributes = [str(item) for item in brand["attributes"]]
-    variant = brand["logo"]["variant"]
-    logo_notes = brand["logo"].get("notes") or "Geometria e proporção definidas na fase de logo."
+    display = design["type"]["display"]
+    body_type = design["type"]["body"]
+    scale = design["type"].get("scale", {})
+    variant = design["logo"]["variant"]
+    logo_notes = design["logo"].get("notes") or "Geometria e proporção definidas na fase de logo."
+    unit = design["shape"]["unit"]
 
-    theme_default, theme_lock = _theme_parts(theme)
+    theme_default, theme_lock, toggle, initial = _theme_parts(theme, brand)
     safe_title = _esc(title)
 
     mapping = {
@@ -527,15 +958,23 @@ def render_page(fmt: str, brand: dict, title: str, theme: str = "light") -> str:
         "HEADLINE": safe_title,
         "SOMOS_LIST": _somos_list(attributes),
         "NAO_SOMOS_LIST": _nao_somos_list(attributes),
-        "COLOR_CARDS": _color_cards(brand, _color_tokens(theme_css)),
-        "PAIR_ROWS": _pair_rows(brand),
+        "COLOR_CARDS": _color_cards(brand),
+        "PAIR_ROWS": _pair_rows(theme_css),
         "TYPE_ROWS": _type_rows(theme_css),
-        "GRADIENT_FROM": _esc(brand["gradient"]["from"]),
-        "GRADIENT_TO": _esc(brand["gradient"]["to"]),
-        "FONT_DISPLAY": _esc(brand["fonts"]["display"]["family"]),
-        "FONT_BODY": _esc(brand["fonts"]["body"]["family"]),
-        "SCALE_BASE": _esc(brand["scale"]["base"]),
-        "SCALE_RATIO": _esc(brand["scale"]["ratio"]),
+        "FEEDBACK_CARDS": _feedback_cards(brand),
+        "CHART_SWATCHES": _chart_swatches(),
+        "ICON_SAMPLES": _icon_samples(brand),
+        "IMAGE_SAMPLE": _image_sample(brand),
+        "COMPONENT_SAMPLES": _component_samples(brand),
+        "COMPOSITION_RULES": _composition_rules(brand),
+        "APPLICATION_CARDS": _application_cards(brand),
+        "GRADIENT_SECTION": _gradient_section(brand),
+        "ICONIFY_SCRIPT": _iconify_script() if fmt in FORMAT_ICONS else "",
+        "CHART_SCRIPT": _chart_script() if fmt in FORMAT_CHARTS else "",
+        "FONT_DISPLAY": _esc(display["family"]),
+        "FONT_BODY": _esc(body_type["family"]),
+        "SCALE_BASE": _esc(scale.get("base", 16)),
+        "SCALE_RATIO": _esc(scale.get("ratio", 1.25)),
         "LOGO_VARIANT": _esc(variant),
         "LOGO_NOTES": _esc(logo_notes),
         "LOGO_C": _lockup("C", name),
@@ -544,8 +983,8 @@ def render_page(fmt: str, brand: dict, title: str, theme: str = "light") -> str:
         "LOGO_HEADER": _lockup(variant, name),
         "LOGO_MARK_ONLY": _logo_for_nav(variant, name),
         "LOGO_SIZE_SAMPLES": _logo_size_samples(variant, name),
-        "LOGO_BREATHING": f"{brand['unit']}px",
-        "THEME_TOGGLE": THEME_TOGGLE,
+        "LOGO_BREATHING": f"{unit}px",
+        "THEME_TOGGLE": toggle,
         "THEME_DEFAULT": theme_default,
         "THEME_LOCK": theme_lock,
         "THEME_JS": THEME_JS,
@@ -571,6 +1010,7 @@ def render_page(fmt: str, brand: dict, title: str, theme: str = "light") -> str:
     page = page.replace("{{BODY}}", body.strip())
     if fmt == "deck":
         page = page.replace("</body>", "<script>\n" + DECK_JS + "\n</script>\n</body>")
+    page = _set_initial_theme(page, initial)
 
     leftover = re.findall(r"\{\{[A-Z0-9_]+\}\}", page)
     if leftover:
@@ -594,7 +1034,7 @@ def new_page(
     brand: str | Path,
     title: str,
     out: str | Path,
-    theme: str = "light",
+    theme: str | None = None,
     force: bool = False,
 ) -> Path:
     """Render and write one format; return the path of the written file.
@@ -604,16 +1044,14 @@ def new_page(
 
     if fmt not in FORMATS:
         raise ValueError(f"unknown format {fmt!r} (choose from {', '.join(FORMATS)})")
-    if theme not in THEMES:
+    if theme is not None and theme not in THEMES:
         raise ValueError(f"unknown theme {theme!r} (choose from {', '.join(THEMES)})")
     data = load_brand(brand)
     page = render_page(fmt, data, title, theme)
 
     destination = _destination(out, fmt)
     if destination.exists() and not force:
-        raise FileExistsError(
-            f"refusing to overwrite {destination} without --force"
-        )
+        raise FileExistsError(f"refusing to overwrite {destination} without --force")
     destination.parent.mkdir(parents=True, exist_ok=True)
     destination.write_text(page, encoding="utf-8")
     return destination
@@ -621,7 +1059,7 @@ def new_page(
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
-        description="Generate a branded single-file HTML page from brand.json."
+        description="Generate a branded single-file HTML starter page from brand.json."
     )
     parser.add_argument("--brand", help="path to brand.json (flag wins over discovery)")
     parser.add_argument("--format", required=True, choices=FORMATS)
@@ -629,7 +1067,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "--out", required=True, help="output .html file (or directory to hold <format>.html)"
     )
-    parser.add_argument("--theme", default="light", choices=THEMES)
+    parser.add_argument("--theme", default=None, choices=THEMES)
     parser.add_argument("--force", action="store_true", help="replace an existing output file")
     args = parser.parse_args(argv)
 
@@ -655,7 +1093,8 @@ def main(argv: list[str] | None = None) -> int:
         print(f"new_page: {exc}", file=sys.stderr)
         return 2
 
-    print(f"ok: {destination} ({args.format}, tema {args.theme})")
+    theme_label = args.theme or "padrão da marca"
+    print(f"ok: {destination} ({args.format}, tema {theme_label})")
     return 0
 
 

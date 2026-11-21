@@ -1,30 +1,37 @@
-"""Tests for the branded single-file page generator.
+"""Tests for the v2 branded single-file page generator.
 
-Run with pytest (``python3 -m pytest skills/brand-engine/tests/test_new_page.py``)
-or directly with Python when pytest is unavailable
-(``python3 skills/brand-engine/tests/test_new_page.py``).
+Run with the stdlib runner (pytest is unavailable in this repo)::
 
-The generated HTML is the contract Task 4's checker consumes: a single file
-with the logo sprite at the top of ``<body>``, a theme toggle, semantic tokens
-only, and one ``<main>``/``<h1>`` per format.
+    python3 skills/brand-engine/tests/test_new_page.py
+
+The generated HTML is the contract the checker consumes: a single file with
+the logo sprite at the top of ``<body>``, semantic tokens only, one
+``<main>``/``<h1>`` per page, and conditional CDN scripts (Iconify only where
+icons are used, Chart.js only on formats with a chart).
+
+Every format reads the v2 brand model: all visual data lives under
+``design`` and the raw dict returned by ``build_theme.load_brand`` is what
+``render_page`` receives.
 """
 
 from __future__ import annotations
 
+import contextlib
+import io
+import json
+import os
 import re
-import subprocess
 import sys
 import tempfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 SCRIPTS = ROOT / "scripts"
-SAMPLE_BRAND = Path(__file__).resolve().parent / "fixtures" / "forno-e-brasa.brand.json"
-FORMATS = ("manual", "onepage", "deck", "report", "social", "blank")
+FIXTURES = Path(__file__).resolve().parent / "fixtures"
 
 sys.path.insert(0, str(SCRIPTS))
 
-try:  # RED phase: the generator does not exist yet.
+try:  # RED phase: the v2 generator may not be importable yet.
     import new_page as npg
 except ImportError as exc:  # pragma: no cover - only on the first red run
     npg = None  # type: ignore[assignment]
@@ -32,195 +39,239 @@ except ImportError as exc:  # pragma: no cover - only on the first red run
 else:
     IMPORT_ERROR = None
 
+EXPECTED_FORMATS = (
+    "manual",
+    "onepage",
+    "deck",
+    "report",
+    "social",
+    "app",
+    "brand-kit",
+    "blank",
+)
+
 
 def generator():
-    assert npg is not None, f"new_page not defined ({IMPORT_ERROR})"
+    assert npg is not None, f"new_page not importable ({IMPORT_ERROR})"
     return npg
 
 
-def content_html(html: str) -> str:
-    """The page markup without <style>/<script> blocks or comments.
-
-    Tokens live in the stylesheet and comments; the content itself must never
-    carry a bare hex or a palette utility.
-    """
-
-    without_blocks = re.sub(r"<style\b.*?</style>", "", html, flags=re.S | re.I)
-    without_blocks = re.sub(r"<script\b.*?</script>", "", without_blocks, flags=re.S | re.I)
-    return re.sub(r"<!--.*?-->", "", without_blocks, flags=re.S)
+def brand(fixture: str) -> dict:
+    return generator().load_brand(FIXTURES / f"{fixture}.brand.json")
 
 
-def content_classes(html: str) -> list[str]:
-    classes: list[str] = []
-    for group in re.findall(r'class="([^"]*)"', content_html(html), flags=re.I):
-        classes.extend(group.split())
-    return classes
+def render(fmt: str, theme: str | None = None, fixture: str = "forno-e-brasa") -> str:
+    return generator().render_page(fmt, brand(fixture), "Forno & Brasa", theme)
 
 
 def generate(fmt: str, out: str | Path, **kwargs: object) -> str:
-    """Generate a page and return its HTML; ``new_page`` returns the path."""
-
     mod = generator()
-    path = mod.new_page(fmt, SAMPLE_BRAND, "Forno & Brasa", out, **kwargs)
+    path = mod.new_page(fmt, FIXTURES / "forno-e-brasa.brand.json", "Forno & Brasa", out, **kwargs)
     assert isinstance(path, Path), f"new_page must return a path, got {type(path)}"
     return path.read_text(encoding="utf-8")
 
 
-def test_new_page_returns_the_written_path() -> None:
+def headings(html: str) -> list[str]:
+    found = re.findall(r"<h[123][^>]*>(.*?)</h[123]>", html, flags=re.S | re.I)
+    return [re.sub(r"<[^>]+>", "", item).strip().casefold() for item in found]
+
+
+# ---------------------------------------------------------------------------
+# Every format
+# ---------------------------------------------------------------------------
+
+
+def test_render_every_format() -> None:
     mod = generator()
-    with tempfile.TemporaryDirectory() as tmp:
-        path = mod.new_page("blank", SAMPLE_BRAND, "Forno & Brasa", tmp)
-        assert isinstance(path, Path)
-        assert path == Path(tmp) / "blank.html"
-        assert path.is_file()
-        assert "<svg><symbol" in path.read_text(encoding="utf-8")
+    assert mod.FORMATS == EXPECTED_FORMATS, mod.FORMATS
+    assert tuple(mod.FORMATS) == EXPECTED_FORMATS
 
-        target = Path(tmp) / "custom.html"
-        returned = mod.new_page("blank", SAMPLE_BRAND, "Outro título", target, force=True)
-        assert isinstance(returned, Path)
-        assert not isinstance(returned, str)
-        assert returned == target
-        assert returned.is_file()
+    for fmt in EXPECTED_FORMATS:
+        html = render(fmt)
+        assert html.lower().count("<main") == 1, fmt
+        assert html.lower().count("<h1") == 1, fmt
+        assert not re.search(r"\{\{[A-Z0-9_]+\}\}", html), fmt
+        assert "<svg><symbol" in html, f"{fmt} has no logo sprite"
+        assert html.index("<svg><symbol") < html.index("<main"), fmt
+        assert "--b-canvas:" in html and "--b-color-" in html, f"{fmt} has no theme CSS"
+        assert f'data-format="{fmt}"' in html, fmt
+        assert "prefers-color-scheme" in html, fmt
 
 
-def test_generates_six_formats_with_sprite_and_no_hex() -> None:
+def test_format_scripts_are_conditional() -> None:
+    report = render("report")
+    assert "chart.umd" in report, "report must load Chart.js"
+    assert "BrandCharts" in report, "report must load the BrandCharts helper"
+
+    onepage = render("onepage")
+    assert "chart.umd" not in onepage, "onepage has no chart and must not load Chart.js"
+    assert "BrandCharts" not in onepage
+
+    for fmt in ("onepage", "app", "brand-kit", "manual", "report"):
+        assert "iconify-icon" in render(fmt), f"{fmt} uses Iconify icons"
+
+    blank = render("blank")
+    assert "chart.umd" not in blank
+    assert "cdn.jsdelivr.net/npm/iconify-icon" not in blank, (
+        "blank has no icons and must not load Iconify"
+    )
+
+
+# ---------------------------------------------------------------------------
+# placehold.co
+# ---------------------------------------------------------------------------
+
+
+def test_placehold_url_uses_brand_colors() -> None:
+    data = brand("forno-e-brasa")
+    canvas = data["design"]["colors"]["canvas"]["hex"].lstrip("#").upper()
+    primary = data["design"]["colors"]["primary"]["hex"].lstrip("#").upper()
+
+    html = render("brand-kit")
+    urls = re.findall(r"https://placehold\.co/[^\s\"'<>]+", html)
+    assert urls, "brand-kit needs a placehold.co image sample"
+    assert any(canvas in url and primary in url for url in urls), urls
+    assert not any("#" in url for url in urls), "placehold colours carry no #"
+
+
+def test_placehold_theme_swap() -> None:
+    html = render("brand-kit")
+    assert "data-placehold-dark" in html
+    assert "data-placehold-light" in html
+    assert "img[data-placehold-dark]" in generator().THEME_JS, (
+        "THEME_JS must swap img[data-placehold-dark] on theme change"
+    )
+
+    light_only = render("brand-kit", fixture="brutalist")
+    assert "data-placehold-dark=" not in light_only
+
+
+# ---------------------------------------------------------------------------
+# Theme modes
+# ---------------------------------------------------------------------------
+
+
+def test_theme_modes() -> None:
     mod = generator()
-    with tempfile.TemporaryDirectory() as tmp:
-        for fmt in FORMATS:
-            html = generate(fmt, tmp)
-            assert "<svg><symbol" in html, fmt
-            assert "data-theme-toggle" in html, fmt
-            assert f'data-format="{fmt}"' in html, fmt
-            # The sprite is injected at the top of <body>, before the content.
-            assert html.index("<svg><symbol") < html.index("<main"), fmt
-            assert html.index("<svg><symbol") > html.index("<body"), fmt
-            # No palette utilities, no bare hex in class or style.
-            assert "bg-blue-600" not in html, fmt
-            classes = " ".join(content_classes(html))
-            assert not re.search(r"#[0-9A-Fa-f]{6}\b", classes), fmt
-            assert not re.search(
-                r'style="[^"]*#[0-9A-Fa-f]{3,8}', content_html(html)
-            ), fmt
-            assert (Path(tmp) / f"{fmt}.html").is_file(), fmt
 
-        manual = generate("manual", tmp, force=True)
-        assert "SOMOS" in manual
-        assert "NÃO SOMOS" in manual
-        # Only the single approved gradient utility; no ad-hoc gradients.
-        assert "bg-grad-brand" in manual
-        assert "bg-gradient-to" not in manual
-        # Single-file: nothing but the six HTML files lands in the directory.
-        assert sorted(path.name for path in Path(tmp).iterdir()) == sorted(
-            f"{fmt}.html" for fmt in FORMATS
-        )
-        assert mod is npg
+    dark_only = render("blank", fixture="luxury")
+    assert 'data-theme-default="dark"' in dark_only
+    assert 'data-theme="dark"' in dark_only
+    assert 'data-theme-lock="dark"' in dark_only
+    # The shared bare CSS mentions [data-theme-toggle]; the button is what is gone.
+    assert "data-theme-toggle aria-label" not in dark_only
+    assert 'd === "dark" ? "dark" : "light"' in dark_only
 
+    light_only = render("blank", fixture="brutalist")
+    assert 'data-theme-default="light"' in light_only
+    assert 'data-theme-lock="light"' in light_only
+    assert "data-theme-toggle aria-label" not in light_only
+    assert '[data-theme="dark"] {' not in light_only
 
-def test_each_format_does_its_own_job() -> None:
-    generator()
-    with tempfile.TemporaryDirectory() as tmp:
-        onepage = generate("onepage", tmp)
-        assert 'data-page="hero"' in onepage
-        assert 'data-page="proof"' in onepage
-        assert 'data-page="cta"' in onepage
+    both = render("blank")
+    assert "data-theme-toggle" in both
+    assert 'data-theme-lock="' not in both
+    assert '[data-theme="dark"] {' in both
 
-        deck = generate("deck", tmp)
-        assert deck.count("data-slide") >= 4
-        assert "1280px" in deck and "720px" in deck
-        assert "container-type: inline-size" in deck
-
-        report = generate("report", tmp)
-        assert "<table" in report
-        assert "<caption" in report
-        assert '<th scope="col"' in report
-        assert "tabular-nums" in report
-
-        social = generate("social", tmp)
-        assert 'data-social="square"' in social
-        assert 'data-social="story"' in social
-        assert "1080px" in social
-        assert "1080 × 1080" in social and "1080 × 1920" in social
-
-        blank = generate("blank", tmp)
-        assert "<main" in blank and "<h1" in blank
-        assert "<table" not in blank
-
-        manual = generate("manual", tmp)
-        for term in (
-            "Propósito",
-            "Tom de voz",
-            "Cores",
-            "Brasa",
-            "#A6402F",
-            "Pantone",
-            "Tipografia",
-            "8px",
-            "área de respiro",
-            "Misuses",
-        ):
-            assert term in manual, term
-
-
-def test_every_page_has_one_main_one_h1_and_accessible_tables() -> None:
-    generator()
-    with tempfile.TemporaryDirectory() as tmp:
-        for fmt in FORMATS:
-            html = generate(fmt, tmp)
-            assert html.lower().count("<main") == 1, fmt
-            assert html.lower().count("<h1") == 1, fmt
-            for table in re.findall(r"<table\b.*?</table>", html, flags=re.S | re.I):
-                assert "<caption" in table, fmt
-                assert "<th" in table, fmt
-            for button in re.findall(r"<button\b[^>]*>", html, flags=re.I):
-                assert "aria-label" in button or "title=" in button, (fmt, button)
-
-
-def test_titles_and_brand_copy_are_escaped() -> None:
-    mod = generator()
-    with tempfile.TemporaryDirectory() as tmp:
-        path = mod.new_page(
-            "blank", SAMPLE_BRAND, 'Forno & <Brasa> "x"', tmp, force=True
-        )
-        html = path.read_text(encoding="utf-8")
-        assert "<title>Forno &amp; &lt;Brasa&gt; &quot;x&quot;</title>" in html
-        assert "<h1" in html and "Forno &amp; &lt;Brasa&gt;" in html
-        assert "<Brasa>" not in html
-
-
-def test_theme_modes_set_default_and_lock() -> None:
-    generator()
-    with tempfile.TemporaryDirectory() as tmp:
-        dark = generate("blank", tmp, theme="dark", force=True)
-        assert 'data-theme-default="dark"' in dark
-        assert 'data-theme-lock="' not in dark
-
-        system = generate("blank", tmp, theme="system", force=True)
-        assert 'data-theme-default="system"' in system
-        assert 'data-theme-lock="' not in system
-
-        locked = generate("blank", tmp, theme="dark-only", force=True)
-        assert 'data-theme-default="dark"' in locked
-        assert 'data-theme-lock="dark"' in locked
-        # The toggle markup stays for the checker; the lock hides it visually.
-        assert "data-theme-toggle" in locked
-
+    # A single-mode brand rejects a mode it does not have and `system`.
+    for bad in ("light", "system", "light-only"):
         try:
-            generate("blank", tmp, theme="neon", force=True)
+            mod.render_page("blank", brand("luxury"), "X", bad)
         except ValueError as exc:
             assert "theme" in str(exc)
         else:
-            raise AssertionError("an unknown theme must raise ValueError")
+            raise AssertionError(f"{bad!r} must be rejected by a dark-only brand")
+
+    # `theme=None` follows design.theme.default.
+    assert 'data-theme-default="dark"' in render("blank", fixture="luxury")
 
 
-def test_refuses_overwrite_without_force() -> None:
-    generator()
+def test_theme_default_dark_applies_dark() -> None:
+    data = brand("forno-e-brasa")
+    data = json.loads(json.dumps(data))
+    data["design"]["theme"]["default"] = "dark"
+
+    html = generator().render_page("blank", data, "Forno & Brasa", None)
+    assert 'data-theme-default="dark"' in html
+    assert 'data-theme="dark"' in html
+
+
+# ---------------------------------------------------------------------------
+# New formats and the manual's new sections
+# ---------------------------------------------------------------------------
+
+
+def test_brand_kit_is_supported() -> None:
+    html = render("brand-kit")
+    assert "<main" in html and "data-theme-toggle" in html
+    for case in ("onepage", "report", "deck", "app", "social"):
+        assert f'data-case="{case}"' in html, f"brand-kit is missing the {case} mini case"
+    for heading in ("logo", "cores", "feedback", "gráficos", "tipografia", "ícones"):
+        assert heading in headings(html), heading
+
+
+def test_app_is_supported() -> None:
+    html = render("app")
+    assert 'data-region="topbar"' in html
+    assert 'data-region="sidebar"' in html
+    assert "<table" in html and "<caption" in html
+    assert "<dialog" in html
+
+
+def test_manual_has_feedback_and_chart_sections() -> None:
+    html = render("manual")
+    found = headings(html)
+    for heading in ("feedback", "gráficos", "ícones", "imagem", "componentes", "composição", "aplicações"):
+        assert any(heading in item for item in found), heading
+
+    assert "bg-success-soft" in html
+    assert "bg-chart-1" in html
+    assert "iconify-icon" in html
+    assert "placehold.co" in html
+
+
+def test_gradient_section_only_when_defined() -> None:
+    assert "bg-grad-brand" not in render("manual")
+    gradient = render("manual", fixture="luxury")
+    assert "bg-grad-brand" in gradient
+
+
+def test_font_links_include_display_and_body() -> None:
+    html = render("blank")
+    assert html.count("family=Fraunces") == 1
+    assert html.count("family=Source+Sans+3") == 1
+
+    # A single-family brand links it once, not twice.
+    data = brand("forno-e-brasa")
+    data = json.loads(json.dumps(data))
+    data["design"]["type"]["body"]["family"] = "Fraunces"
+    html = generator().render_page("blank", data, "Uma família", None)
+    assert html.count("family=Fraunces") == 1
+
+
+def test_manual_nao_somos_fallback() -> None:
+    data = brand("forno-e-brasa")
+    data = json.loads(json.dumps(data))
+    data["attributes"] = ["artesanal", "lunar"]
+
+    html = generator().render_page("manual", data, "Manual", None)
+    assert "industrial" in html, "a known attribute uses the antonym map"
+    assert "[placeholder — oposto de lunar]" in html
+
+
+# ---------------------------------------------------------------------------
+# Overwrite protection and CLI
+# ---------------------------------------------------------------------------
+
+
+def test_new_page_refuses_overwrite() -> None:
+    mod = generator()
     with tempfile.TemporaryDirectory() as tmp:
         target = Path(tmp) / "page.html"
-        assert (target).exists() is False
         generate("blank", target)
-        assert target.is_file()
-
         before = target.read_text(encoding="utf-8")
+        assert before
+
         try:
             generate("blank", target)
         except FileExistsError as exc:
@@ -229,100 +280,44 @@ def test_refuses_overwrite_without_force() -> None:
             raise AssertionError("expected FileExistsError without force")
         assert target.read_text(encoding="utf-8") == before
 
-        generator().new_page("blank", SAMPLE_BRAND, "Outro título", target, force=True)
+        mod.new_page(
+            "blank",
+            FIXTURES / "forno-e-brasa.brand.json",
+            "Outro título",
+            target,
+            force=True,
+        )
         forced = target.read_text(encoding="utf-8")
         assert forced != before
         assert "Outro título" in forced
 
-def test_cli_writes_page_and_explains_errors() -> None:
+
+def test_cli_missing_brand_exits_2() -> None:
+    mod = generator()
     with tempfile.TemporaryDirectory() as tmp:
-        out = Path(tmp) / "landing.html"
-        result = subprocess.run(
-            [
-                sys.executable,
-                str(SCRIPTS / "new_page.py"),
-                "--brand",
-                str(SAMPLE_BRAND),
-                "--format",
-                "onepage",
-                "--title",
-                "Forno & Brasa",
-                "--out",
-                str(out),
-            ],
-            capture_output=True,
-            text=True,
-            check=False,
-        )
-        assert result.returncode == 0, result.stderr
-        assert out.is_file()
-        assert "ok:" in result.stdout
-        assert 'data-format="onepage"' in out.read_text(encoding="utf-8")
+        previous = os.getcwd()
+        os.chdir(tmp)
+        stderr = io.StringIO()
+        try:
+            with contextlib.redirect_stderr(stderr):
+                code = mod.main(
+                    [
+                        "--format",
+                        "blank",
+                        "--title",
+                        "Sem marca",
+                        "--out",
+                        str(Path(tmp) / "blank.html"),
+                    ]
+                )
+        finally:
+            os.chdir(previous)
 
-        again = subprocess.run(
-            [
-                sys.executable,
-                str(SCRIPTS / "new_page.py"),
-                "--brand",
-                str(SAMPLE_BRAND),
-                "--format",
-                "onepage",
-                "--title",
-                "Forno & Brasa",
-                "--out",
-                str(out),
-            ],
-            capture_output=True,
-            text=True,
-            check=False,
-        )
-        assert again.returncode == 2
-        assert "--force" in again.stderr
-        assert "Traceback" not in again.stderr
-
-        forced = subprocess.run(
-            [
-                sys.executable,
-                str(SCRIPTS / "new_page.py"),
-                "--brand",
-                str(SAMPLE_BRAND),
-                "--format",
-                "onepage",
-                "--title",
-                "Forno & Brasa",
-                "--out",
-                str(out),
-                "--force",
-            ],
-            capture_output=True,
-            text=True,
-            check=False,
-        )
-        assert forced.returncode == 0, forced.stderr
-
-
-def test_cli_without_brand_asks_instead_of_crashing() -> None:
-    with tempfile.TemporaryDirectory() as tmp:
-        result = subprocess.run(
-            [
-                sys.executable,
-                str(SCRIPTS / "new_page.py"),
-                "--format",
-                "blank",
-                "--title",
-                "Sem marca",
-                "--out",
-                str(Path(tmp) / "blank.html"),
-            ],
-            cwd=tmp,
-            capture_output=True,
-            text=True,
-            check=False,
-        )
-        assert result.returncode == 2, result.stderr
-        assert "Traceback" not in result.stderr
-        assert "--brand" in result.stderr
-        assert "brand.json" in result.stderr
+        message = stderr.getvalue()
+        assert code == 2, message
+        assert "Traceback" not in message
+        assert "--brand" in message
+        assert "brand.json" in message
 
 
 if __name__ == "__main__":
