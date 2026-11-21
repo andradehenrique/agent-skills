@@ -45,6 +45,16 @@ Optional keys: ``name`` (brand name), ``version`` (must be 1 when present),
 ``--b-color-<slug>`` keeps the approved hex for every named color. Semantic
 tokens (``--b-primary``, ``--b-fg``, ...) may shift slightly to meet WCAG
 contrast; the gradient always uses the approved hex pair.
+
+Usage limits for generated tokens:
+
+- ``--b-primary`` is guaranteed 3:1 against the canvas, and ``--b-on-primary``
+  stays at 4.5:1 against both ``--b-primary`` and ``--b-primary-hover``, so
+  primary is for UI fills and large text only. Body text uses ``--b-link`` or
+  ``--b-fg``.
+- ``--b-line`` and ``--b-line-strong`` are decorative separators.
+  ``--b-line-input`` is guaranteed 3:1 against surface and canvas for control
+  boundaries (WCAG 1.4.11).
 """
 
 from __future__ import annotations
@@ -209,6 +219,41 @@ def ensure_contrast(foreground: str, background: str, minimum: float = 4.5) -> s
         if contrast_ratio(candidate, background) >= minimum:
             return candidate
     return target
+
+
+def ensure_background_contrast(
+    foreground: str, background: str, minimum: float = 4.5
+) -> str:
+    """Shift a background away from ``foreground`` until the pair reaches ``minimum``.
+
+    Used for hover fills: the same ``on-primary`` foreground must stay readable
+    when the button background moves to ``primary-hover``.
+    """
+
+    if contrast_ratio(foreground, background) >= minimum:
+        return background.upper()
+
+    target = "#FFFFFF" if relative_luminance(foreground) < 0.18 else "#000000"
+    for step in range(1, 21):
+        candidate = mix(background, target, step / 20)
+        if contrast_ratio(foreground, candidate) >= minimum:
+            return candidate
+    return target
+
+
+def _ensure_contrast_all(
+    foreground: str, backgrounds: Iterable[str], minimum: float = 4.5
+) -> str:
+    """Ensure one foreground clears ``minimum`` against every background."""
+
+    color = foreground.upper()
+    options = tuple(backgrounds)
+    for _ in range(5):
+        worst = min(options, key=lambda background: contrast_ratio(color, background))
+        if contrast_ratio(color, worst) >= minimum:
+            return color
+        color = ensure_contrast(color, worst, minimum)
+    return color
 
 
 def _on_color(background: str) -> str:
@@ -508,10 +553,12 @@ def _semantic_tokens(model: _Model, mode: str) -> dict[str, str]:
         highlight = mix("#121110", accent_source, 0.38)
         on_highlight = ensure_contrast("#FFFFFF", highlight, 4.5)
 
-    accent = ensure_contrast(accent_source, surface, 4.5)
-    link = ensure_contrast(primary_source, surface, 4.5)
-    focus = ensure_contrast(accent_source, surface, 3.0)
+    accent = _ensure_contrast_all(accent_source, (surface, canvas), 4.5)
+    link = _ensure_contrast_all(primary_source, (surface, canvas), 4.5)
+    focus = _ensure_contrast_all(accent_source, (surface, canvas), 3.0)
     on_primary = _on_color(primary)
+    # The hover fill must keep the same on-primary readable (no contrast dip).
+    primary_hover = ensure_background_contrast(on_primary, primary_hover, 4.5)
     on_primary_soft = ensure_contrast(primary_source, primary_soft, 4.5)
     on_band = ensure_contrast("#FFFFFF", band, 4.5)
     on_band_muted = ensure_contrast(mix(on_band, band, 0.25), band, 4.5)
@@ -532,7 +579,7 @@ def _semantic_tokens(model: _Model, mode: str) -> dict[str, str]:
         "fg-disabled": mix(fg, canvas, 0.62),
         "line": mix(canvas, fg, 0.12),
         "line-strong": mix(canvas, fg, 0.24),
-        "line-input": ensure_contrast(mix(canvas, fg, 0.45), surface, 3.0),
+        "line-input": _ensure_contrast_all(mix(canvas, fg, 0.45), (surface, canvas), 3.0),
         "primary": primary,
         "primary-hover": primary_hover,
         "on-primary": on_primary,
@@ -559,7 +606,20 @@ def _comment(text: Any) -> str:
 
 
 def _declarations(tokens: dict[str, str]) -> list[str]:
-    return [f"  --b-{key}: {value};" for key, value in tokens.items()]
+    lines: list[str] = []
+    for key, value in tokens.items():
+        if key == "line":
+            lines.append(
+                "  /* line and line-strong are decorative separators. "
+                "Use --b-line-input (>=3:1) for control boundaries (WCAG 1.4.11). */"
+            )
+        if key == "primary":
+            lines.append(
+                "  /* primary is UI and large text only (>=3:1 vs canvas). "
+                "For body text use --b-link or --b-fg. */"
+            )
+        lines.append(f"  --b-{key}: {value};")
+    return lines
 
 
 def _theme_css(model: _Model, light: dict[str, str], dark: dict[str, str]) -> str:
@@ -642,6 +702,8 @@ def _tailwind_css(model: _Model) -> str:
         "   so bg-surface and text-fg-muted switch with the theme automatically.",
         "   Semantic utilities only: bg-surface, text-fg-muted, border-line, bg-primary,",
         "   text-on-primary, text-accent, bg-highlight, bg-grad-brand.",
+        "   primary is UI and large text only (>=3:1 vs canvas); use text-link or text-fg for body text.",
+        "   line and line-strong are decorative separators; use line-input for control boundaries (WCAG 1.4.11).",
         "   Never use palette utilities such as bg-blue-600 or a bare hex in content. */",
         "",
         "@custom-variant dark (&:where([data-theme=dark], [data-theme=dark] *));",

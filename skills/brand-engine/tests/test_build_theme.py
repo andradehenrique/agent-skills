@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import copy
 import json
+import re
 import subprocess
 import sys
 import tempfile
@@ -39,6 +40,18 @@ def write_brand(directory: Path, data: dict[str, Any]) -> Path:
     path = directory / "brand.json"
     path.write_text(json.dumps(data), encoding="utf-8")
     return path
+
+
+def semantic_tokens(theme_css: str) -> dict[str, dict[str, str]]:
+    """Extract the --b-* declarations from the :root and dark blocks."""
+
+    blocks: dict[str, dict[str, str]] = {}
+    pattern = re.compile(r':root \{(.*?)\n\}|\[data-theme="dark"\] \{(.*?)\n\}', re.S)
+    for match in pattern.finditer(theme_css):
+        mode = "light" if match.group(1) else "dark"
+        body = match.group(1) or match.group(2)
+        blocks[mode] = dict(re.findall(r"--b-([\w-]+):\s*([^;]+);", body))
+    return blocks
 
 
 def test_build_theme_from_sample_brand() -> None:
@@ -74,6 +87,43 @@ def test_build_theme_from_sample_brand() -> None:
         out = Path(tmp)
         assert (out / "theme.css").read_text(encoding="utf-8") == theme_css
         assert (out / "tailwind-theme.css").read_text(encoding="utf-8") == tailwind_theme_css
+
+
+def test_contrast_guarantees_cover_hover_and_control_boundaries() -> None:
+    mod = builder()
+    data = json.loads(SAMPLE_BRAND.read_text(encoding="utf-8"))
+    # A mid-tone primary makes the hover shade the hard case for on-primary.
+    data["colors"]["primary"][0]["hex"] = "#777777"
+
+    theme_css, _ = mod.render_theme(data)
+    tokens = semantic_tokens(theme_css)
+
+    for mode in ("light", "dark"):
+        current = tokens[mode]
+        assert mod.contrast_ratio(current["on-primary"], current["primary"]) >= 4.5, mode
+        assert mod.contrast_ratio(current["on-primary"], current["primary-hover"]) >= 4.5, mode
+        assert mod.contrast_ratio(current["line-input"], current["surface"]) >= 3.0, mode
+        assert mod.contrast_ratio(current["line-input"], current["canvas"]) >= 3.0, mode
+        assert mod.contrast_ratio(current["link"], current["surface"]) >= 4.5, mode
+        assert mod.contrast_ratio(current["link"], current["canvas"]) >= 4.5, mode
+        assert mod.contrast_ratio(current["accent"], current["surface"]) >= 4.5, mode
+        assert mod.contrast_ratio(current["accent"], current["canvas"]) >= 4.5, mode
+
+
+def test_generated_css_documents_token_usage_limits() -> None:
+    mod = builder()
+    with tempfile.TemporaryDirectory() as tmp:
+        theme_css, tailwind_theme_css = mod.build_theme(SAMPLE_BRAND, tmp)
+
+    assert "UI and large text only" in theme_css
+    assert "--b-link" in theme_css
+    assert "decorative separators" in theme_css
+    assert "WCAG 1.4.11" in theme_css
+    assert "line-input" in theme_css
+
+    assert "UI and large text only" in tailwind_theme_css
+    assert "decorative separators" in tailwind_theme_css
+    assert "line-input" in tailwind_theme_css
 
 
 def test_build_theme_refuses_overwrite_without_force() -> None:
