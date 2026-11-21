@@ -1,17 +1,17 @@
-"""Tests for the extended brand checker.
+"""Tests for the v2 brand checker.
 
-Run with pytest (``python3 -m pytest skills/brand-engine/tests/test_check_page.py``)
-or directly with Python when pytest is unavailable
-(``python3 skills/brand-engine/tests/test_check_page.py``).
+Run with the stdlib runner (pytest is not required)::
 
-The fixtures are real ``new_page()`` output, so the checker is validated against
-the same HTML contract Task 3 ships. Each test then mutates one thing and
-asserts the matching rule fires.
+    python3 skills/brand-engine/tests/test_check_page.py
+
+The fixtures are minimal, hand-written v2 pages: the generated theme tokens,
+the logo sprite, one <main> and one <h1>. Each test mutates one thing and
+asserts the matching rule fires. The generator (``new_page.py``) is not used
+here so the checker contract stays independent of the generator rewrite.
 """
 
 from __future__ import annotations
 
-import re
 import subprocess
 import sys
 import tempfile
@@ -19,12 +19,12 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 SCRIPTS = ROOT / "scripts"
-SAMPLE_BRAND = Path(__file__).resolve().parent / "fixtures" / "forno-e-brasa.brand.json"
-FORMATS = ("manual", "onepage", "deck", "report", "social", "blank")
+FIXTURES = Path(__file__).resolve().parent / "fixtures"
+BRAND = FIXTURES / "forno-e-brasa.brand.json"
 
 sys.path.insert(0, str(SCRIPTS))
 
-try:  # RED phase: the checker does not exist yet.
+try:  # RED phase: the v2 checker does not exist yet.
     import check_page as checking
 except ImportError as exc:  # pragma: no cover - only on the first red run
     checking = None  # type: ignore[assignment]
@@ -32,13 +32,38 @@ except ImportError as exc:  # pragma: no cover - only on the first red run
 else:
     IMPORT_ERROR = None
 
-try:  # Task 3 output is the fixture for the checker.
-    import new_page as npg
-except ImportError as exc:  # pragma: no cover - already covered by Task 3 tests
-    npg = None  # type: ignore[assignment]
-    NEW_PAGE_ERROR = exc
-else:
-    NEW_PAGE_ERROR = None
+# The twelve generated steps for base 16 / ratio 1.25 (build_theme.py).
+TYPE_STEPS = (
+    ("xs", 10),
+    ("sm", 13),
+    ("base", 16),
+    ("lg", 20),
+    ("xl", 25),
+    ("2xl", 31),
+    ("3xl", 39),
+    ("4xl", 49),
+    ("5xl", 61),
+    ("6xl", 76),
+    ("7xl", 95),
+    ("8xl", 119),
+)
+
+SPRITE = (
+    '<div hidden aria-hidden="true" data-logo-sprite>'
+    '<svg><symbol id="be-mark" viewBox="0 0 32 32"><path d="M4 28V14h24v14H4Z"/></symbol></svg>'
+    "</div>"
+)
+BREATHING = (
+    "<!-- logo: breathing area / área de respiro = S (var(--b-space-1), 8px) "
+    "em todos os lados. -->"
+)
+SKIP_LINK = '<a href="#conteudo" class="be-skip">Pular para o conteúdo</a>'
+THEME_TOGGLE = (
+    '<button type="button" data-theme-toggle aria-label="Alternar tema" '
+    'aria-pressed="false" class="inline-flex size-6 items-center justify-center '
+    'rounded-full border border-line-input bg-surface text-fg-muted '
+    'hover:bg-surface-muted hover:text-fg">Tema</button>'
+)
 
 
 def checker():
@@ -46,16 +71,90 @@ def checker():
     return checking
 
 
-def generator():
-    assert npg is not None, f"new_page not defined ({NEW_PAGE_ERROR})"
-    return npg
+def tokens(
+    *,
+    unit: int = 8,
+    dark_block: bool = True,
+    gradient: bool = False,
+    extra_type: tuple[tuple[str, int], ...] = (),
+) -> str:
+    lines = [":root {", f"  --b-unit: {unit}px;"]
+    for name, size in TYPE_STEPS + extra_type:
+        lines.append(f"  --b-text-{name}: {size}px;")
+    for step in range(0, 17):
+        lines.append(f"  --b-space-{step}: {step * unit}px;")
+    lines.append("  --b-radius-md: 8px;")
+    lines.append("  --b-shadow-1: 0 1px 2px rgba(0, 0, 0, 0.06);")
+    if gradient:
+        # Any angle and any stops: v2 has no 45deg / 50-50 requirement.
+        lines.append(
+            "  --b-gradient: linear-gradient(120deg, #123456 0%, #654321 100%);"
+        )
+    lines.append("}")
+    if dark_block:
+        lines.append(
+            '[data-theme="dark"] { color-scheme: dark; --b-canvas: #101010; }'
+        )
+    return "\n".join(lines)
 
 
-def render(fmt: str, tmp: str | Path, **kwargs: object) -> str:
-    path = generator().new_page(
-        fmt, SAMPLE_BRAND, "Forno & Brasa", tmp, force=True, **kwargs
+def build(
+    content: str = '<p class="mt-4 text-base text-fg-muted">Texto de apoio.</p>',
+    *,
+    fmt: str = "blank",
+    unit: int = 8,
+    theme: str = "both",
+    toggle: bool = True,
+    locked: str = "",
+    gradient: bool = False,
+    extra_type: tuple[tuple[str, int], ...] = (),
+    head_extra: str = "",
+    sprite: bool = True,
+    breathing: bool = True,
+) -> str:
+    """Build a clean v2 page around ``content`` inside <main>."""
+
+    assert theme in {"light", "dark", "both"}
+    html_attrs = ' data-theme="dark"' if theme == "dark" else ""
+    if locked:
+        html_attrs += f' data-theme-lock="{locked}"'
+    parts = [
+        "<!doctype html>",
+        f'<html lang="pt-BR"{html_attrs}>',
+        "<head>",
+        '<meta charset="utf-8">',
+        '<meta name="viewport" content="width=device-width, initial-scale=1">',
+        "<title>Fixture v2</title>",
+        "<style>",
+        tokens(
+            unit=unit,
+            dark_block=theme == "both",
+            gradient=gradient,
+            extra_type=extra_type,
+        ),
+        "</style>",
+        head_extra,
+        "</head>",
+        f'<body class="min-h-svh bg-canvas font-sans text-fg antialiased" data-format="{fmt}">',
+    ]
+    if sprite:
+        parts.append(SPRITE)
+    parts.append(SKIP_LINK)
+    if toggle:
+        parts.append(THEME_TOGGLE)
+    if breathing:
+        parts.append(BREATHING)
+    parts.extend(
+        [
+            '<main id="conteudo" class="mx-auto max-w-3xl px-4 py-8">',
+            '<h1 class="text-3xl font-semibold">Página</h1>',
+            content,
+            "</main>",
+            "</body>",
+            "</html>",
+        ]
     )
-    return path.read_text(encoding="utf-8")
+    return "\n".join(parts)
 
 
 def write(tmp: str | Path, name: str, html: str) -> str:
@@ -64,324 +163,361 @@ def write(tmp: str | Path, name: str, html: str) -> str:
     return str(path)
 
 
-def findings(path: str) -> list[str]:
-    return checker().check_page(path)
+def findings(html: str) -> list[str]:
+    return checker().check_html(html)
 
 
-def errors(path: str) -> list[str]:
-    return [item for item in findings(path) if item.startswith("ERROR")]
+def errors(html: str) -> list[str]:
+    return [item for item in findings(html) if item.startswith("ERROR")]
 
 
-def assert_rule(path: str, rule: str, severity: str = "ERROR") -> str:
-    matches = [
+def has(html: str, rule: str, severity: str = "ERROR") -> list[str]:
+    return [
         item
-        for item in findings(path)
+        for item in findings(html)
         if item.startswith(severity) and f"[{rule}]" in item
     ]
-    assert matches, f"expected {severity} [{rule}], got {findings(path)}"
+
+
+def assert_rule(html: str, rule: str, severity: str = "ERROR") -> str:
+    matches = has(html, rule, severity)
+    assert matches, f"expected {severity} [{rule}], got {findings(html)}"
     return matches[0]
 
 
-def strip_block(html: str, pattern: str) -> str:
-    return re.sub(pattern, "", html, count=1, flags=re.S)
+# ---------------------------------------------------------------------------
+# Tokens
+# ---------------------------------------------------------------------------
 
 
-def test_generated_pages_have_no_errors() -> None:
-    """The generator's six formats are the checker's clean baseline."""
-
-    with tempfile.TemporaryDirectory() as tmp:
-        for fmt in FORMATS:
-            render(fmt, tmp)
-            path = str(Path(tmp) / f"{fmt}.html")
-            problems = errors(path)
-            assert problems == [], (fmt, problems)
+def test_accepts_v2_page() -> None:
+    clean = build(
+        '<div class="rounded-md border border-line bg-surface p-4 text-fg">'
+        "Cartão</div>"
+    )
+    assert findings(clean) == [], findings(clean)
 
 
-def test_checker_catches_brand_violations() -> None:
-    """The five violations from the plan brief, as real assertions."""
-
-    with tempfile.TemporaryDirectory() as tmp:
-        good = render("blank", tmp)
-        good_path = write(tmp, "good.html", good)
-        assert errors(good_path) == []
-
-        hex_in_class = good.replace(
-            'class="min-h-svh bg-canvas', 'class="min-h-svh bg-[#A6402F]', 1
-        )
-        assert_rule(write(tmp, "hex-class.html", hex_in_class), "tokens")
-
-        hex_in_style = good.replace(
-            "</main>", '<div style="color:#A6402F">x</div></main>', 1
-        )
-        assert_rule(write(tmp, "hex-style.html", hex_in_style), "tokens")
-
-        missing_sprite = strip_block(
-            good, r"\s*<div hidden aria-hidden=\"true\" data-logo-sprite>.*?</div>"
-        )
-        assert_rule(write(tmp, "no-sprite.html", missing_sprite), "sprite")
-
-        three_stop = good.replace(
-            "linear-gradient(45deg, #A6402F 50%, #C97B4A 50%)",
-            "linear-gradient(45deg, #A6402F 33%, #C97B4A 66%, #5F6B45 100%)",
-            1,
-        )
-        assert_rule(write(tmp, "three-stop.html", three_stop), "gradient")
-
-        report = render("report", tmp)
-        no_caption = strip_block(report, r"<caption>.*?</caption>")
-        assert_rule(write(tmp, "no-caption.html", no_caption), "table")
+def test_rejects_bare_hex() -> None:
+    assert_rule(
+        build('<div class="bg-[#A6402F]">x</div>'),
+        "tokens",
+    )
+    assert_rule(build('<div style="color:#A6402F">x</div>'), "tokens")
 
 
-def test_checker_catches_structure_and_accessibility_failures() -> None:
-    with tempfile.TemporaryDirectory() as tmp:
-        good = render("blank", tmp)
-
-        unlabelled = good.replace(
-            'data-theme-toggle aria-label="Alternar tema claro/escuro" aria-pressed="false"',
-            'data-theme-toggle aria-pressed="false"',
-            1,
-        )
-        assert_rule(write(tmp, "unlabelled.html", unlabelled), "a11y")
-
-        onclick = good.replace(
-            "</main>", '<div onclick="alert(1)">x</div></main>', 1
-        )
-        assert_rule(write(tmp, "onclick.html", onclick), "events")
-
-        heading_skip = good.replace(
-            "</main>", '<h4 class="text-lg">Salto</h4></main>', 1
-        )
-        assert_rule(write(tmp, "heading-skip.html", heading_skip), "headings")
-
-        two_h1 = good.replace(
-            "</main>", '<h1 class="text-3xl">Outro</h1></main>', 1
-        )
-        assert_rule(write(tmp, "two-h1.html", two_h1), "headings")
-
-        two_main = good.replace(
-            "</body>", '<main id="outro">Texto</main></body>', 1
-        )
-        assert_rule(write(tmp, "two-main.html", two_main), "structure")
-
-        duplicate_id = good.replace(
-            "</main>", '<span id="conteudo">x</span></main>', 1
-        )
-        assert_rule(write(tmp, "duplicate-id.html", duplicate_id), "a11y")
-
-        dangling = good.replace('<main id="conteudo"', "<main", 1)
-        assert_rule(write(tmp, "dangling-anchor.html", dangling), "a11y")
-
-        no_alt = good.replace(
-            "</main>", '<img src="data:image/png;base64,AA">' + "</main>", 1
-        )
-        assert_rule(write(tmp, "no-alt.html", no_alt), "a11y")
-
-        unlabelled_input = good.replace(
-            "</main>", '<input type="text"></main>', 1
-        )
-        assert_rule(write(tmp, "unlabelled-input.html", unlabelled_input), "a11y")
-
-        no_scope = render("report", tmp).replace(
-            '<th scope="col">', "<th>", 1
-        )
-        assert_rule(write(tmp, "no-scope.html", no_scope), "table", severity="WARN")
+def test_rejects_palette_utility() -> None:
+    assert_rule(build('<div class="bg-blue-600 text-white">x</div>'), "tokens")
 
 
-def test_checker_catches_token_type_and_spacing_drift() -> None:
-    with tempfile.TemporaryDirectory() as tmp:
-        good = render("blank", tmp)
-
-        palette = good.replace(
-            "</main>", '<div class="bg-blue-600 p-2">x</div></main>', 1
-        )
-        assert_rule(write(tmp, "palette.html", palette), "tokens")
-
-        off_scale_type = good.replace(
-            "</main>", '<p class="text-7xl">x</p></main>', 1
-        )
-        assert_rule(write(tmp, "type-7xl.html", off_scale_type), "type-scale")
-
-        arbitrary_type = good.replace(
-            "</main>", '<p class="text-[18px]">x</p></main>', 1
-        )
-        assert_rule(write(tmp, "type-arbitrary.html", arbitrary_type), "type-scale")
-
-        skipped_step = good.replace(
-            "</main>", '<div class="p-5">x</div></main>', 1
-        )
-        assert_rule(write(tmp, "spacing-5.html", skipped_step), "spacing")
-
-        off_grid = good.replace(
-            "</main>", '<div class="p-[20px]">x</div></main>', 1
-        )
-        assert_rule(write(tmp, "spacing-20.html", off_grid), "spacing")
-
-        on_grid = good.replace(
-            "</main>", '<div class="p-[24px]">x</div></main>', 1
-        )
-        assert errors(write(tmp, "spacing-24.html", on_grid)) == []
-
-        inline_style = good.replace(
-            "</main>", '<div style="margin: 5px">x</div></main>', 1
-        )
-        assert_rule(write(tmp, "spacing-inline.html", inline_style), "spacing")
-
-        raw_color = good.replace(
-            "</main>", '<div style="color: red">x</div></main>', 1
-        )
-        assert_rule(write(tmp, "raw-color.html", raw_color), "tokens")
-
-        primary_body = good.replace(
-            "</main>", '<p class="text-primary">x</p></main>', 1
-        )
-        assert_rule(write(tmp, "primary-body.html", primary_body), "tokens")
-
-        primary_heading = good.replace(
-            "</main>", '<h2 class="text-primary">Título</h2></main>', 1
-        )
-        assert not any(
-            "[tokens]" in item and "text-primary" in item
-            for item in findings(write(tmp, "primary-heading.html", primary_heading))
-        )
-
-        weak_control = good.replace(
-            "</main>",
-            '<input type="text" aria-label="Nome" class="border border-line">'
-            + "</main>",
-            1,
-        )
-        assert_rule(write(tmp, "weak-control.html", weak_control), "tokens")
-
-        primary_no_hover = good.replace(
-            "</main>",
-            '<a href="#" class="bg-primary text-on-primary">Ação</a></main>',
-            1,
-        )
-        assert_rule(write(tmp, "primary-hover.html", primary_no_hover), "tokens", "WARN")
+def test_rejects_arbitrary_color() -> None:
+    assert_rule(build('<div class="bg-[rgb(10,10,10)]">x</div>'), "tokens")
 
 
-def test_checker_catches_gradient_and_logo_misuse() -> None:
-    with tempfile.TemporaryDirectory() as tmp:
-        good = render("blank", tmp)
+def test_accepts_feedback_and_chart_tokens() -> None:
+    content = (
+        '<p class="mt-2 bg-success-soft p-2 text-success">Salvo</p>'
+        '<p class="mt-2 bg-warning text-on-warning">Atenção</p>'
+        '<div class="mt-2 h-4 bg-chart-1">Dado</div>'
+        '<div class="mt-2 h-4 bg-chart-8">Dado</div>'
+    )
+    assert findings(build(content)) == [], findings(build(content))
 
-        tailwind_gradient = good.replace(
-            "</main>", '<div class="bg-gradient-to-r from-primary to-accent">x</div></main>', 1
-        )
-        assert_rule(write(tmp, "tw-gradient.html", tailwind_gradient), "gradient")
 
-        wrong_angle = good.replace("linear-gradient(45deg", "linear-gradient(90deg", 1)
-        assert_rule(write(tmp, "angle.html", wrong_angle), "gradient")
+# ---------------------------------------------------------------------------
+# Type scale (inferred from --b-text-*)
+# ---------------------------------------------------------------------------
 
-        wrong_stops = good.replace(
-            "#A6402F 50%, #C97B4A 50%", "#A6402F 0%, #C97B4A 100%", 1
-        )
-        assert_rule(write(tmp, "stops.html", wrong_stops), "gradient")
 
-        radial = good.replace(
-            "</head>",
-            "<style>.x{background-image: radial-gradient(circle, #fff, #000)}</style>"
-            + "</head>",
-            1,
-        )
-        assert_rule(write(tmp, "radial.html", radial), "gradient")
+def test_rejects_off_scale_text() -> None:
+    assert_rule(build('<p class="text-9xl">Grande</p>'), "type-scale")
 
-        no_breathing = strip_block(
-            good, r"\s*<!-- logo: breathing area.*?-->"
-        )
-        assert_rule(write(tmp, "no-breathing.html", no_breathing), "logo-breathing")
 
-        transformed = good.replace(
-            '<svg class="be-mark" aria-hidden="true">',
-            '<svg class="be-mark" aria-hidden="true" style="transform: rotate(10deg)">',
-            1,
-        )
-        assert_rule(write(tmp, "logo-rotate.html", transformed), "logo-misuse")
+def test_accepts_embedded_type_steps() -> None:
+    default = build('<p class="text-7xl">Grande</p>')
+    assert not has(default, "type-scale"), findings(default)
 
-        raster_logo = good.replace(
-            "</main>", '<img src="data:image/png;base64,AA" alt="Logo">' + "</main>", 1
-        )
-        assert_rule(write(tmp, "logo-raster.html", raster_logo), "logo-misuse")
+    embedded = build(
+        '<p class="text-9xl">Grande</p>',
+        extra_type=(("9xl", 149),),
+    )
+    assert not has(embedded, "type-scale"), findings(embedded)
 
-        manual = render("manual", tmp)
-        for phrase, rule in (
-            (r"<li>Recolorir.*?</li>", "recolor"),
-            (r"<li>Rotacionar.*?</li>", "rotate"),
-            (r"<li>Esticar.*?</li>", "stretch"),
-            (r"<li>Trocar.*?</li>", "replace"),
-        ):
-            mutated = strip_block(manual, phrase)
-            found = assert_rule(
-                write(tmp, f"misuse-{rule}.html", mutated), "misuse"
-            )
-            assert rule in found, (rule, found)
+
+def test_rejects_arbitrary_type_size() -> None:
+    assert_rule(build('<p class="text-[18px]">x</p>'), "type-scale")
+
+
+# ---------------------------------------------------------------------------
+# Spacing (unit 4/8, inferred from --b-unit)
+# ---------------------------------------------------------------------------
+
+
+def test_accepts_unit_4_spacing() -> None:
+    content = '<div class="mt-9 gap-7 p-5">x</div>'
+    assert findings(build(content, unit=4)) == [], findings(build(content, unit=4))
+
+
+def test_rejects_off_unit_spacing() -> None:
+    assert_rule(build('<div class="p-[6px]">x</div>', unit=4), "spacing")
+    assert_rule(build('<div class="p-5">x</div>'), "spacing")
+    assert_rule(build('<div class="p-[20px]">x</div>'), "spacing")
+
+    for unit, length in ((8, "24px"), (4, "20px")):
+        clean = build(f'<div class="p-[{length}]">x</div>', unit=unit)
+        assert not has(clean, "spacing"), (unit, findings(clean))
+
+
+# ---------------------------------------------------------------------------
+# Gradient (optional, inferred from --b-gradient)
+# ---------------------------------------------------------------------------
+
+
+def test_optional_gradient_absent_ok() -> None:
+    assert findings(build()) == [], findings(build())
+
+
+def test_ad_hoc_gradient_rejected() -> None:
+    assert_rule(
+        build('<div class="bg-gradient-to-r from-primary to-accent">x</div>'),
+        "gradient",
+    )
+    assert_rule(
+        build(
+            "",
+            head_extra="<style>.x{background-image: linear-gradient(90deg, red, blue)}</style>",
+        ),
+        "gradient",
+    )
+    assert_rule(
+        build('<div style="background: linear-gradient(90deg, red, blue)">x</div>'),
+        "gradient",
+    )
+    assert_rule(build('<div class="bg-grad-brand">x</div>'), "gradient")
+
+
+def test_brand_gradient_utility_allowed_when_defined() -> None:
+    html = build('<div class="bg-grad-brand p-4">x</div>', gradient=True)
+    assert not has(html, "gradient"), findings(html)
+
+
+# ---------------------------------------------------------------------------
+# Theme modes
+# ---------------------------------------------------------------------------
+
+
+def test_dark_only_no_toggle_required() -> None:
+    html = build(theme="dark", toggle=False)
+    assert not has(html, "structure"), findings(html)
+
+
+def test_dark_both_requires_toggle() -> None:
+    html = build(theme="both", toggle=False)
+    assert_rule(html, "structure")
+
+    clean = build(theme="both", toggle=True)
+    assert not has(clean, "structure"), findings(clean)
+
+
+def test_theme_lock_removes_toggle_requirement() -> None:
+    html = build(theme="both", toggle=False, locked="light")
+    assert not has(html, "structure"), findings(html)
+
+
+# ---------------------------------------------------------------------------
+# Icons and images
+# ---------------------------------------------------------------------------
+
+
+def test_iconify_icon_needs_label_or_hidden() -> None:
+    bare = '<iconify-icon icon="fluent:check-24-regular"></iconify-icon>'
+    assert_rule(build(bare), "icons")
+
+    hidden = (
+        '<iconify-icon icon="fluent:check-24-regular" aria-hidden="true">'
+        "</iconify-icon>"
+    )
+    assert not has(build(hidden), "icons"), findings(build(hidden))
+
+    labelled = (
+        '<iconify-icon icon="fluent:check-24-regular" aria-label="Concluído">'
+        "</iconify-icon>"
+    )
+    assert not has(build(labelled), "icons"), findings(build(labelled))
+
+
+def test_image_alt_required() -> None:
+    assert_rule(build('<img src="data:image/png;base64,AA">'), "images")
+
+    decorative = build('<img src="data:image/png;base64,AA" alt="">')
+    assert not has(decorative, "images"), findings(decorative)
+
+    described = build('<img src="data:image/png;base64,AA" alt="Forno a lenha">')
+    assert not has(described, "images"), findings(described)
+
+
+# ---------------------------------------------------------------------------
+# Formats
+# ---------------------------------------------------------------------------
+
+APP_CONTENT = """
+<div class="flex min-h-svh">
+  <aside class="w-64 border-r border-line bg-surface p-4">
+    <nav aria-label="Principal">
+      <ul class="space-y-2">
+        <li><a href="#conteudo" class="text-fg-muted">Visão geral</a></li>
+        <li><a href="#conteudo" class="text-fg-muted">Pedidos</a></li>
+      </ul>
+    </nav>
+  </aside>
+  <div class="flex-1">
+    <header class="border-b border-line bg-surface p-4">
+      <h2 class="text-lg font-semibold">Operação</h2>
+      <label for="busca" class="text-fg-muted">Buscar</label>
+      <input id="busca" type="text" class="border border-line-input bg-surface p-2 text-fg">
+    </header>
+    <section class="p-6">
+      <h2 class="text-xl font-semibold">Pedidos de hoje</h2>
+      <table class="w-full text-left">
+        <caption class="text-sm text-fg-muted">Pedidos do dia</caption>
+        <thead>
+          <tr>
+            <th scope="col" class="border-b border-line p-2">Cliente</th>
+            <th scope="col" class="border-b border-line p-2">Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="border-b border-line p-2">Ana</td>
+            <td class="border-b border-line p-2">Pronto</td>
+          </tr>
+        </tbody>
+      </table>
+      <div class="mt-6 rounded-md border border-line bg-surface p-6 text-center">
+        <p class="text-fg-muted">Nenhum pedido pendente.</p>
+      </div>
+      <img src="data:image/png;base64,AA" alt="" class="mt-4 size-8 rounded-full">
+    </section>
+  </div>
+</div>
+"""
+
+BRAND_KIT_CONTENT = """
+<section class="mt-8">
+  <h2 class="text-2xl font-semibold">Paleta</h2>
+  <ul class="mt-4 grid grid-cols-2 gap-4">
+    <li class="rounded-md border border-line bg-surface p-4"><span class="text-fg">Primária</span></li>
+    <li class="rounded-md border border-line bg-primary-soft p-4"><span class="text-on-primary-soft">Primária suave</span></li>
+    <li class="rounded-md border border-line bg-success-soft p-4"><span class="text-success">Sucesso</span></li>
+    <li class="rounded-md border border-line bg-info-soft p-4"><span class="text-info">Informação</span></li>
+  </ul>
+</section>
+<section class="mt-8">
+  <h2 class="text-2xl font-semibold">Dados</h2>
+  <div class="mt-4 flex gap-2">
+    <div class="h-4 w-16 bg-chart-1"></div>
+    <div class="h-4 w-16 bg-chart-2"></div>
+    <div class="h-4 w-16 bg-chart-3"></div>
+  </div>
+</section>
+<section class="mt-8">
+  <h2 class="text-2xl font-semibold">Tipografia</h2>
+  <p class="mt-4 text-7xl font-semibold">Aa</p>
+  <p class="mt-2 text-base text-fg-muted">Texto de leitura.</p>
+</section>
+<section class="mt-8">
+  <h2 class="text-2xl font-semibold">Componentes</h2>
+  <div class="mt-4 flex gap-2">
+    <a href="#conteudo" class="rounded-md bg-primary px-4 py-2 text-on-primary hover:bg-primary-hover">Ação</a>
+    <button type="button" class="rounded-md border border-line-input px-4 py-2 text-fg">Secundária</button>
+  </div>
+  <table class="mt-4 w-full text-left">
+    <caption class="text-sm text-fg-muted">Amostra de tabela</caption>
+    <thead><tr><th scope="col" class="border-b border-line p-2">Item</th><th scope="col" class="border-b border-line p-2">Valor</th></tr></thead>
+    <tbody><tr><td class="border-b border-line p-2">Massa</td><td class="border-b border-line p-2">01</td></tr></tbody>
+  </table>
+  <div class="mt-4 rounded-md border border-line bg-surface p-6 text-center">
+    <iconify-icon icon="fluent:folder-24-regular" aria-hidden="true"></iconify-icon>
+    <p class="mt-2 text-fg-muted">Nada por aqui ainda.</p>
+  </div>
+</section>
+"""
+
+
+def test_app_format_passes() -> None:
+    html = build(APP_CONTENT, fmt="app", sprite=False, breathing=False)
+    assert findings(html) == [], findings(html)
+
+
+def test_brand_kit_format_passes() -> None:
+    html = build(BRAND_KIT_CONTENT, fmt="brand-kit")
+    assert findings(html) == [], findings(html)
+
+
+# ---------------------------------------------------------------------------
+# CLI
+# ---------------------------------------------------------------------------
+
+
+def run_cli(*args: str) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(
+        [sys.executable, str(SCRIPTS / "check_page.py"), *args],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
 
 
 def test_checker_cli_reports_and_exits() -> None:
     with tempfile.TemporaryDirectory() as tmp:
-        clean = Path(write(tmp, "clean.html", render("blank", tmp)))
-        result = subprocess.run(
-            [sys.executable, str(SCRIPTS / "check_page.py"), str(clean)],
-            capture_output=True,
-            text=True,
-            check=False,
-        )
+        clean = write(tmp, "clean.html", build())
+        result = run_cli(clean)
         assert result.returncode == 0, result.stdout + result.stderr
         assert "ok:" in result.stdout
         assert "Traceback" not in result.stderr
 
-        broken = Path(
-            write(
-                tmp,
-                "broken.html",
-                render("blank", tmp).replace(
-                    "</main>", '<div class="p-5">x</div></main>', 1
-                ),
-            )
-        )
-        failed = subprocess.run(
-            [sys.executable, str(SCRIPTS / "check_page.py"), str(broken)],
-            capture_output=True,
-            text=True,
-            check=False,
-        )
+        broken = write(tmp, "broken.html", build('<div class="p-5">x</div>'))
+        failed = run_cli(broken)
         assert failed.returncode == 1
         assert "ERROR [spacing]" in failed.stdout
         assert "Traceback" not in failed.stderr
 
-        missing = subprocess.run(
-            [sys.executable, str(SCRIPTS / "check_page.py"), str(Path(tmp) / "nope.html")],
-            capture_output=True,
-            text=True,
-            check=False,
-        )
+        missing = run_cli(str(Path(tmp) / "nope.html"))
         assert missing.returncode == 2
         assert "Traceback" not in missing.stderr
         assert "check_page:" in missing.stderr
 
-        warns = Path(
-            write(
-                tmp,
-                "warns.html",
-                render("report", tmp).replace('<th scope="col">', "<th>", 1),
-            )
+        warns = write(
+            tmp,
+            "warns.html",
+            build(
+                '<table><caption>T</caption><thead><tr><th>H</th></tr></thead></table>',
+                fmt="report",
+            ),
         )
-        lenient = subprocess.run(
-            [sys.executable, str(SCRIPTS / "check_page.py"), str(warns)],
-            capture_output=True,
-            text=True,
-            check=False,
-        )
+        lenient = run_cli(warns)
         assert lenient.returncode == 0, lenient.stdout + lenient.stderr
         assert "WARN [table]" in lenient.stdout
 
-        strict = subprocess.run(
-            [sys.executable, str(SCRIPTS / "check_page.py"), str(warns), "--strict"],
-            capture_output=True,
-            text=True,
-            check=False,
-        )
+        strict = run_cli(warns, "--strict")
         assert strict.returncode == 1
         assert "WARN [table]" in strict.stdout
+
+
+def test_cli_brand_flag_is_optional_and_validates() -> None:
+    with tempfile.TemporaryDirectory() as tmp:
+        clean = write(tmp, "clean.html", build())
+
+        valid = run_cli(clean, "--brand", str(BRAND))
+        assert valid.returncode == 0, valid.stdout + valid.stderr
+
+        invalid = run_cli(clean, "--brand", str(Path(tmp) / "missing.json"))
+        assert invalid.returncode == 1
+        assert "ERROR [brand]" in invalid.stdout
+        assert "Traceback" not in invalid.stderr
+
+        api = checker().check_page(clean, BRAND)
+        assert api == [], api
 
 
 if __name__ == "__main__":

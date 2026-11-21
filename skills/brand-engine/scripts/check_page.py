@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Static brand checker for single-file HTML pages.
+"""Static v2 brand checker for single-file HTML pages.
 
 ``check_page(path) -> list[str]`` reads one HTML file and returns findings.
 Every finding is a string starting with ``ERROR`` or ``WARN``::
@@ -7,21 +7,39 @@ Every finding is a string starting with ``ERROR`` or ``WARN``::
     ERROR [tokens] line 42: bare hex #A6402F in class="…"
     WARN  [table] line 80: <th> without scope
 
+The v2 contract is the only contract; there is no compatibility mode. The
+checker infers the brand rules from the page itself:
+
+- the generated type steps from ``--b-text-*``;
+- the spacing unit (4 or 8) from ``--b-unit``;
+- whether dark mode exists from a ``[data-theme="dark"]`` block;
+- whether a brand gradient exists from ``--b-gradient``.
+
+``--brand`` is optional and only adds strict validation of the brand file.
+
 Rules cover the Task 3 HTML contract:
 
 - structure: one ``<main>``, exactly one ``<h1>``, heading order, document shell;
+  a theme toggle is required only when both light and dark modes exist and the
+  page is not locked with ``data-theme-lock``;
 - static a11y: accessible names, table ``caption``/``th``/``scope``, duplicate
   ids, dangling ARIA/fragment references, no inline handlers on ``div``;
 - tokens only: no bare hex, palette utilities, raw colours or arbitrary colours
-  in content classes/styles;
-- type scale and spacing: ``text-*`` sizes from the generated scale, spacing on
-  the 8px grid (the coarse scale skips 5/7/9/11);
-- gradient: exactly the two-stop 50/50 45deg brand gradient, no ad-hoc
-  Tailwind gradient utilities;
-- logo: sprite at the top of ``<body>``, breathing-area comment, documented
-  misuses (recolor/rotate/stretch/replace), no rotate/scale/shadow/raster use;
+  in content classes/styles; feedback (``success``/``warning``/``danger``/
+  ``info`` with soft/solid/on variants) and ``chart-1..8`` are allowed;
+- type scale: ``text-*`` sizes from the generated scale embedded in the page;
+- spacing: steps on the page's unit scale (unit 8 keeps the coarse scale, unit 4
+  allows every whole step) and arbitrary lengths on the unit grid;
+- gradient: optional; ad-hoc gradients are rejected and ``bg-grad-brand`` is
+  only valid when ``--b-gradient`` exists (any angle, any stops);
+- icons: ``<iconify-icon>`` is decorative (``aria-hidden="true"``) or labelled;
+- images: ``<img>`` needs ``alt`` (``alt=""`` is valid decorative);
+- logo: sprite at the top of ``<body>`` (except the ``app`` format),
+  breathing-area comment (except ``app``), documented misuses on the manual,
+  no rotate/scale/shadow/raster use;
 - semantic token rules: ``text-primary`` is not body text, controls use
-  ``border-line-input``, primary fills declare a hover state.
+  ``border-line-input``, primary fills declare a hover state;
+- formats: ``app`` and ``brand-kit`` pages are accepted.
 
 The checker is deliberately static: it does not need a browser, ``brand.json``
 or an internet connection. Contrast maths stays in ``build_theme.py``; a
@@ -29,10 +47,10 @@ browser pass (axe) is the complementary check described by the skill.
 
 CLI::
 
-    python3 scripts/check_page.py page.html [more.html …] [--strict]
+    python3 scripts/check_page.py page.html [more.html …] [--strict] [--brand brand.json]
 
 Exit codes: ``0`` clean, ``1`` findings (WARN only counts with ``--strict``),
-``2`` unreadable file. The checker never raises a traceback for a bad path.
+``2`` unreadable HTML file. The checker never raises a traceback for a bad path.
 """
 
 from __future__ import annotations
@@ -44,11 +62,15 @@ from dataclasses import dataclass, field
 from html.parser import HTMLParser
 from pathlib import Path
 
+import build_theme
+
 # ---------------------------------------------------------------------------
 # Contract constants (kept in sync with build_theme.py)
 # ---------------------------------------------------------------------------
 
-SEMANTIC_COLORS = frozenset(
+FEEDBACK_ROLES = ("success", "warning", "danger", "info")
+
+_BASE_SEMANTIC_COLORS = frozenset(
     {
         "canvas",
         "surface",
@@ -71,6 +93,8 @@ SEMANTIC_COLORS = frozenset(
         "primary-soft",
         "on-primary-soft",
         "accent",
+        "accent-soft",
+        "on-accent",
         "link",
         "focus",
         "highlight",
@@ -78,10 +102,46 @@ SEMANTIC_COLORS = frozenset(
     }
 )
 
-TYPE_STEPS = ("xs", "sm", "base", "lg", "xl", "2xl", "3xl", "4xl", "5xl", "6xl")
+SEMANTIC_COLORS = frozenset(
+    _BASE_SEMANTIC_COLORS
+    | {
+        suffix
+        for role in FEEDBACK_ROLES
+        for suffix in (
+            role,
+            f"{role}-soft",
+            f"{role}-solid",
+            f"on-{role}",
+            f"on-{role}-soft",
+        )
+    }
+    | {f"chart-{index}" for index in range(1, 9)}
+)
+
+# Fallback when the page embeds no --b-text-* declarations. Generated pages
+# always embed the scale; the fallback keeps the checker useful on partial
+# snippets without weakening the off-scale rule.
+DEFAULT_TYPE_STEPS = (
+    "xs",
+    "sm",
+    "base",
+    "lg",
+    "xl",
+    "2xl",
+    "3xl",
+    "4xl",
+    "5xl",
+    "6xl",
+    "7xl",
+    "8xl",
+)
 
 # The coarse 8px scale used by the skeletons: 1,2,3,4 then 6,8,10,12,16.
+# A 4px unit allows every whole step.
 SKIPPED_SPACING_STEPS = frozenset({5, 7, 9, 11})
+
+DEFAULT_SPACING_UNIT = 8
+
 
 HEADING_TAGS = frozenset({"h1", "h2", "h3", "h4", "h5", "h6"})
 BODY_TEXT_TAGS = frozenset(
@@ -359,6 +419,12 @@ GRADIENT_RE = re.compile(
 STYLE_BLOCK_RE = re.compile(r"<style\b[^>]*>(.*?)</style>", re.I | re.S)
 CSS_COMMENT_RE = re.compile(r"/\*.*?\*/", re.S)
 
+# v2 inference: the page carries its own generated contract.
+TYPE_TOKEN_RE = re.compile(r"--b-text-([a-z0-9]+)\s*:\s*\d+(?:\.\d+)?px")
+SPACING_UNIT_RE = re.compile(r"--b-unit\s*:\s*(4|8)px")
+BRAND_GRADIENT_RE = re.compile(r"--b-gradient\s*:\s*[^;}\n]+;?")
+DARK_BLOCK_RE = re.compile(r"""\[\s*data-theme\s*=\s*["']?dark["']?\s*\]""")
+
 LOGO_CLASSES = frozenset({"be-mark", "be-wordmark", "be-monogram", "be-brand"})
 MISUSE_TERMS = (
     ("recolor", r"recolor|recolorir|cor fora|gradiente no logo"),
@@ -511,24 +577,6 @@ def _style_declarations(style: str) -> list[tuple[str, str]]:
     return declarations
 
 
-def _split_top_level(text: str) -> list[str]:
-    parts: list[str] = []
-    current: list[str] = []
-    depth = 0
-    for char in text:
-        if char == "(":
-            depth += 1
-        elif char == ")":
-            depth = max(0, depth - 1)
-        if char == "," and depth == 0:
-            parts.append("".join(current))
-            current = []
-        else:
-            current.append(char)
-    parts.append("".join(current))
-    return parts
-
-
 def _gradient_calls(css: str) -> list[tuple[str, str, int]]:
     calls: list[tuple[str, str, int]] = []
     for match in GRADIENT_RE.finditer(css):
@@ -644,16 +692,38 @@ def _check_document(doc: _Document, html: str) -> list[str]:
     if not viewport:
         findings.append(_finding("WARN", "a11y", "missing viewport meta tag"))
 
-    if not any("data-theme-toggle" in element.attrs for element in doc.elements):
-        findings.append(
-            _finding(
-                "ERROR",
-                "structure",
-                "missing theme toggle (data-theme-toggle)",
-            )
-        )
-
     return findings
+
+
+def _has_dark_tokens(html: str) -> bool:
+    """True when the page defines a dark override block (both modes exist)."""
+
+    return bool(DARK_BLOCK_RE.search(html))
+
+
+def _has_theme_toggle(doc: _Document) -> bool:
+    return any("data-theme-toggle" in element.attrs for element in doc.elements)
+
+
+def _is_theme_locked(doc: _Document) -> bool:
+    return any("data-theme-lock" in element.attrs for element in doc.elements)
+
+
+def _check_theme(doc: _Document, html: str) -> list[str]:
+    """Require a toggle only for both-mode pages without a lock."""
+
+    if _is_theme_locked(doc) or not _has_dark_tokens(html):
+        return []
+    if _has_theme_toggle(doc):
+        return []
+    return [
+        _finding(
+            "ERROR",
+            "structure",
+            "page defines light and dark modes; add a data-theme-toggle "
+            "(or lock the theme with data-theme-lock)",
+        )
+    ]
 
 
 def _check_structure(doc: _Document) -> list[str]:
@@ -880,15 +950,6 @@ def _check_a11y_names(doc: _Document) -> list[str]:
         if _is_hidden(element):
             continue
 
-        if element.tag == "img" and "alt" not in element.attrs:
-            findings.append(
-                _finding(
-                    "ERROR",
-                    "a11y",
-                    'img without alt (use alt="" when decorative)',
-                    element.line,
-                )
-            )
         if element.tag == "iframe" and not element.get("title").strip():
             findings.append(
                 _finding("ERROR", "a11y", "iframe without title", element.line)
@@ -1052,10 +1113,17 @@ def _has_raw_colour(value: str) -> bool:
     return False
 
 
-def _check_type_scale(doc: _Document) -> list[str]:
+def _generated_type_steps(html: str) -> set[str]:
+    """Read the generated type steps from ``--b-text-*`` declarations."""
+
+    return {match.group(1) for match in TYPE_TOKEN_RE.finditer(html)}
+
+
+def _check_type_scale(doc: _Document, html: str) -> list[str]:
     findings: list[str] = []
     seen: set[str] = set()
-    allowed = set(TYPE_STEPS) | set(SEMANTIC_COLORS) | set(TEXT_UTILITIES)
+    steps = _generated_type_steps(html) or set(DEFAULT_TYPE_STEPS)
+    allowed = steps | set(SEMANTIC_COLORS) | set(TEXT_UTILITIES)
     for element in doc.elements:
         for token in element.classes:
             base = _base_class(token)
@@ -1072,8 +1140,8 @@ def _check_type_scale(doc: _Document) -> list[str]:
             ):
                 continue
             message = (
-                f'text size "{token}" is not in the scale '
-                f'({" / ".join(TYPE_STEPS)}) or a semantic colour'
+                f'text size "{token}" is not generated by the page scale '
+                f'({" / ".join(sorted(steps))}) or a semantic colour'
             )
             if message not in seen:
                 seen.add(message)
@@ -1081,9 +1149,21 @@ def _check_type_scale(doc: _Document) -> list[str]:
     return findings
 
 
-def _check_spacing(doc: _Document) -> list[str]:
+def _spacing_unit(html: str) -> int:
+    match = SPACING_UNIT_RE.search(html)
+    return int(match.group(1)) if match else DEFAULT_SPACING_UNIT
+
+
+def _step_off_scale(step: int, unit: int) -> bool:
+    if unit == 4:
+        return False
+    return step in SKIPPED_SPACING_STEPS
+
+
+def _check_spacing(doc: _Document, html: str) -> list[str]:
     findings: list[str] = []
     seen: set[str] = set()
+    unit = _spacing_unit(html)
 
     def add(message: str, line: int) -> None:
         key = message
@@ -1103,29 +1183,29 @@ def _check_spacing(doc: _Document) -> list[str]:
             if value.startswith("["):
                 inner = value[1:-1] if value.endswith("]") else value[1:]
                 pixels = _arbitrary_pixels(inner)
-                if pixels is not None and _off_grid(pixels):
+                if pixels is not None and _off_unit(pixels, unit):
                     add(
-                        f'spacing "{token}" is off the 8px grid '
-                        f'(skip 5/7/9/11; got {pixels:g}px)',
+                        f'spacing "{token}" is off the {unit}px unit '
+                        f"(got {pixels:g}px)",
                         element.line,
                     )
                 continue
             if value == "px":
-                add(f'spacing "{token}" is 1px; use an 8px step', element.line)
+                add(f'spacing "{token}" is 1px; use a {unit}px step', element.line)
                 continue
             if value in SPACING_KEYWORDS:
                 continue
             if re.fullmatch(r"\d+(?:\.\d+)?", value):
                 if "." in value:
                     add(
-                        f'spacing "{token}" is fractional; use a whole 8px step',
+                        f'spacing "{token}" is fractional; use a whole {unit}px step',
                         element.line,
                     )
                     continue
                 step = int(value)
-                if step in SKIPPED_SPACING_STEPS:
+                if _step_off_scale(step, unit):
                     add(
-                        f'spacing step {step} is outside the coarse 8px scale',
+                        f'spacing step {step} is outside the coarse {unit}px scale',
                         element.line,
                     )
 
@@ -1136,10 +1216,10 @@ def _check_spacing(doc: _Document) -> list[str]:
             if prop not in SPACING_PROPERTIES or "var(" in value:
                 continue
             for pixels in _length_values(value):
-                if _off_grid(pixels):
+                if _off_unit(pixels, unit):
                     add(
-                        f"spacing {prop}: {value} is off the 8px grid "
-                        f"(skip 5/7/9/11; got {pixels:g}px)",
+                        f"spacing {prop}: {value} is off the {unit}px unit "
+                        f"(got {pixels:g}px)",
                         element.line,
                     )
     return findings
@@ -1165,39 +1245,48 @@ def _length_values(value: str) -> list[float]:
     return values
 
 
-def _off_grid(pixels: float) -> bool:
+def _off_unit(pixels: float, unit: int) -> bool:
     magnitude = abs(pixels)
     if magnitude == 0:
         return False
-    if magnitude % 8 != 0:
-        return True
-    return int(magnitude) % 8 == 0 and int(magnitude) in SKIPPED_SPACING_STEPS
+    return magnitude % unit != 0
+
+
+def _has_brand_gradient(html: str) -> bool:
+    return bool(BRAND_GRADIENT_RE.search(html))
+
+
+def _blank_brand_gradient(css: str) -> str:
+    """Blank the ``--b-gradient`` declaration so its own stops are not flagged."""
+
+    return BRAND_GRADIENT_RE.sub(
+        lambda match: re.sub(r"[^\n]", " ", match.group(0)), css
+    )
 
 
 def _check_gradient(doc: _Document, html: str) -> list[str]:
     findings: list[str] = []
+    has_brand_gradient = _has_brand_gradient(html)
 
     for block in STYLE_BLOCK_RE.finditer(html):
-        css = _blank_comments(block.group(1))
-        for name, body, offset in _gradient_calls(css):
+        css = _blank_brand_gradient(_blank_comments(block.group(1)))
+        for name, _body, offset in _gradient_calls(css):
             line = _line_of(html, block.start(1) + offset)
-            if name != "linear-gradient":
-                findings.append(
-                    _finding(
-                        "ERROR",
-                        "gradient",
-                        f"{name} is not allowed; only the 45deg brand linear gradient",
-                        line,
-                    )
+            findings.append(
+                _finding(
+                    "ERROR",
+                    "gradient",
+                    f"{name} is an ad-hoc gradient; define --b-gradient and "
+                    "use bg-grad-brand",
+                    line,
                 )
-                continue
-            findings.extend(_validate_linear_gradient(body, line))
+            )
 
     for element in doc.elements:
         style = element.get("style")
         if not style:
             continue
-        for name, body, _ in _gradient_calls(style):
+        for name, _body, _ in _gradient_calls(style):
             findings.append(
                 _finding(
                     "ERROR",
@@ -1211,6 +1300,15 @@ def _check_gradient(doc: _Document, html: str) -> list[str]:
         for token in element.classes:
             base = _base_class(token)
             if base == "bg-grad-brand":
+                if not has_brand_gradient:
+                    findings.append(
+                        _finding(
+                            "ERROR",
+                            "gradient",
+                            "bg-grad-brand is used but --b-gradient is not defined",
+                            element.line,
+                        )
+                    )
                 continue
             if "gradient(" in base:
                 findings.append(
@@ -1241,80 +1339,15 @@ def _check_gradient(doc: _Document, html: str) -> list[str]:
                 )
             )
 
-    uses_brand_gradient = any(
-        "bg-grad-brand" in {_base_class(token) for token in element.classes}
-        for element in doc.elements
-    )
-    if uses_brand_gradient and not re.search(r"--b-gradient\s*:", html):
-        findings.append(
-            _finding(
-                "ERROR",
-                "gradient",
-                "bg-grad-brand is used but --b-gradient is not defined",
-            )
-        )
-    return findings
-
-
-def _validate_linear_gradient(body: str, line: int) -> list[str]:
-    findings: list[str] = []
-    parts = _split_top_level(body)
-    if not parts:
-        return [_finding("ERROR", "gradient", "empty gradient", line)]
-
-    first = parts[0].strip()
-    has_angle = bool(
-        re.fullmatch(r"-?\d+(?:\.\d+)?(?:deg|rad|turn|grad)", first, re.I)
-    ) or first.lower().startswith("to ")
-    if has_angle:
-        if first.lower() != "45deg":
-            findings.append(
-                _finding(
-                    "ERROR",
-                    "gradient",
-                    f"gradient angle must be 45deg (got {first})",
-                    line,
-                )
-            )
-        stops = parts[1:]
-    else:
-        findings.append(
-            _finding(
-                "ERROR",
-                "gradient",
-                "gradient must declare 45deg before the stops",
-                line,
-            )
-        )
-        stops = parts
-
-    if len(stops) != 2:
-        findings.append(
-            _finding(
-                "ERROR",
-                "gradient",
-                f"gradient must have exactly two stops at 50/50 (found {len(stops)})",
-                line,
-            )
-        )
-    for stop in stops:
-        positions = re.findall(r"(-?\d+(?:\.\d+)?)%", stop)
-        if len(positions) != 1 or float(positions[0]) != 50.0:
-            findings.append(
-                _finding(
-                    "ERROR",
-                    "gradient",
-                    f"gradient stop {stop.strip()!r} must be pinned at 50%",
-                    line,
-                )
-            )
     return findings
 
 
 def _check_sprite(doc: _Document) -> list[str]:
     findings: list[str] = []
     body = doc.body
-    if body is None:
+    # The app shell is a product surface, not a brand proof: it does not carry
+    # the logo sprite. Brand-facing formats still require it.
+    if body is None or doc.page_format == "app":
         return findings
 
     sprite = next(
@@ -1430,7 +1463,9 @@ def _check_logo_rules(doc: _Document) -> list[str]:
             )
 
     comments = " ".join(comment for comment, _ in doc.comments)
-    if not re.search(r"breathing area|área de respiro|area de respiro", comments, re.I):
+    if doc.page_format != "app" and not re.search(
+        r"breathing area|área de respiro|area de respiro", comments, re.I
+    ):
         findings.append(
             _finding(
                 "ERROR",
@@ -1438,7 +1473,9 @@ def _check_logo_rules(doc: _Document) -> list[str]:
                 "missing comment documenting the logo breathing area (S)",
             )
         )
-    elif not re.search(r"--b-space-1|space-1|\bS\b", comments):
+    elif doc.page_format != "app" and not re.search(
+        r"--b-space-1|space-1|\bS\b", comments
+    ):
         findings.append(
             _finding(
                 "WARN",
@@ -1507,6 +1544,104 @@ def _check_logo_rules(doc: _Document) -> list[str]:
     return findings
 
 
+LABEL_TAGS = frozenset(
+    {
+        "a",
+        "button",
+        "dd",
+        "dt",
+        "em",
+        "figcaption",
+        "label",
+        "legend",
+        "li",
+        "p",
+        "small",
+        "span",
+        "strong",
+        "td",
+        "th",
+    }
+)
+
+
+def _adjacent_label(element: _Element) -> bool:
+    """A nearby visible label: labelled parent or a text label sibling."""
+
+    parent = element.parent
+    if parent is None:
+        return False
+    if parent.get("aria-label").strip() or parent.get("title").strip():
+        return True
+    if parent.tag in BODY_TEXT_TAGS and parent.text().strip():
+        return True
+    siblings = parent.children
+    try:
+        index = siblings.index(element)
+    except ValueError:
+        return False
+    for sibling in siblings[max(0, index - 1) : index + 2]:
+        if sibling is element or sibling.tag not in LABEL_TAGS:
+            continue
+        if sibling.text().strip():
+            return True
+    return False
+
+
+def _check_icons(doc: _Document) -> list[str]:
+    """Iconify icons are decorative (hidden) or carry an accessible name."""
+
+    findings: list[str] = []
+    for element in doc.by_tag("iconify-icon"):
+        name = element.get("icon").strip()
+        if not name:
+            findings.append(
+                _finding(
+                    "ERROR",
+                    "icons",
+                    "iconify-icon without an icon name",
+                    element.line,
+                )
+            )
+        if _is_hidden(element) or element.get("aria-hidden").strip().lower() == "true":
+            continue
+        labelled = any(
+            element.get(attribute).strip()
+            for attribute in ("aria-label", "aria-labelledby", "title")
+        )
+        if labelled or _adjacent_label(element):
+            continue
+        findings.append(
+            _finding(
+                "ERROR",
+                "icons",
+                f'iconify-icon "{name}" needs aria-label, an adjacent label, '
+                'or aria-hidden="true"',
+                element.line,
+            )
+        )
+    return findings
+
+
+def _check_images(doc: _Document) -> list[str]:
+    """Every image declares alt; ``alt=""`` is the valid decorative form."""
+
+    findings: list[str] = []
+    for element in doc.by_tag("img"):
+        if _is_hidden(element):
+            continue
+        if "alt" not in element.attrs:
+            findings.append(
+                _finding(
+                    "ERROR",
+                    "images",
+                    'img without alt (use alt="" when decorative)',
+                    element.line,
+                )
+            )
+    return findings
+
+
 def _check_semantic_tokens(doc: _Document) -> list[str]:
     findings: list[str] = []
     for element in doc.elements:
@@ -1564,25 +1699,7 @@ def _check_semantic_tokens(doc: _Document) -> list[str]:
 # ---------------------------------------------------------------------------
 
 
-def check_html(html: str) -> list[str]:
-    """Check an HTML string and return the findings (strings, ERROR/WARN)."""
-
-    doc = _parse(html)
-    findings: list[str] = []
-    findings.extend(_check_document(doc, html))
-    findings.extend(_check_structure(doc))
-    findings.extend(_check_assets(doc))
-    findings.extend(_check_events(doc))
-    findings.extend(_check_a11y_names(doc))
-    findings.extend(_check_tables(doc))
-    findings.extend(_check_tokens(doc))
-    findings.extend(_check_type_scale(doc))
-    findings.extend(_check_spacing(doc))
-    findings.extend(_check_gradient(doc, html))
-    findings.extend(_check_sprite(doc))
-    findings.extend(_check_logo_rules(doc))
-    findings.extend(_check_semantic_tokens(doc))
-
+def _finalize(findings: list[str]) -> list[str]:
     unique: list[str] = []
     seen: set[str] = set()
     for finding in findings:
@@ -1598,12 +1715,55 @@ def check_html(html: str) -> list[str]:
     return sorted(unique, key=sort_key)
 
 
-def check_page(html_path: str | Path) -> list[str]:
-    """Read ``html_path`` and return findings; raises ``OSError`` if unreadable."""
+def _check_brand(brand_path: str | Path) -> list[str]:
+    """Optional strict validation: the brand file must exist and parse."""
+
+    try:
+        build_theme.load_brand(brand_path)
+    except (build_theme.BrandError, OSError, ValueError) as exc:
+        return [_finding("ERROR", "brand", str(exc))]
+    return []
+
+
+def check_html(html: str) -> list[str]:
+    """Check an HTML string and return the findings (strings, ERROR/WARN)."""
+
+    doc = _parse(html)
+    findings: list[str] = []
+    findings.extend(_check_document(doc, html))
+    findings.extend(_check_theme(doc, html))
+    findings.extend(_check_structure(doc))
+    findings.extend(_check_assets(doc))
+    findings.extend(_check_events(doc))
+    findings.extend(_check_a11y_names(doc))
+    findings.extend(_check_icons(doc))
+    findings.extend(_check_images(doc))
+    findings.extend(_check_tables(doc))
+    findings.extend(_check_tokens(doc))
+    findings.extend(_check_type_scale(doc, html))
+    findings.extend(_check_spacing(doc, html))
+    findings.extend(_check_gradient(doc, html))
+    findings.extend(_check_sprite(doc))
+    findings.extend(_check_logo_rules(doc))
+    findings.extend(_check_semantic_tokens(doc))
+    return _finalize(findings)
+
+
+def check_page(
+    html_path: str | Path, brand_path: str | Path | None = None
+) -> list[str]:
+    """Read ``html_path`` and return findings; raises ``OSError`` if unreadable.
+
+    ``brand_path`` is optional. When given, the brand file must exist and parse
+    as a v2 brand (via ``build_theme.load_brand``); failures become findings.
+    """
 
     path = Path(html_path)
     html = path.read_text(encoding="utf-8")
-    return check_html(html)
+    findings = check_html(html)
+    if brand_path is not None:
+        findings = _finalize(_check_brand(brand_path) + findings)
+    return findings
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -1616,6 +1776,12 @@ def main(argv: list[str] | None = None) -> int:
         action="store_true",
         help="exit 1 when only WARN findings remain",
     )
+    parser.add_argument(
+        "--brand",
+        default=None,
+        metavar="brand.json",
+        help="also validate the v2 brand file (optional)",
+    )
     args = parser.parse_args(argv)
 
     total_errors = 0
@@ -1623,7 +1789,7 @@ def main(argv: list[str] | None = None) -> int:
     failed = False
     for name in args.files:
         try:
-            findings = check_page(name)
+            findings = check_page(name, args.brand)
         except (OSError, UnicodeError) as exc:
             print(f"check_page: {name}: {exc}", file=sys.stderr)
             return 2
