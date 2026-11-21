@@ -1,0 +1,452 @@
+<body class="min-h-svh bg-canvas font-sans text-fg antialiased" data-format="brand-kit">
+  <a href="#conteudo" class="be-skip">Pular para o conteúdo</a>
+
+  <header class="border-b border-line bg-canvas">
+    <div class="mx-auto flex max-w-6xl items-center justify-between gap-3 px-3 py-3 sm:px-4">
+      <!-- logo: breathing area / área de respiro = S (var(--b-space-1)) em todos os lados. -->
+      {{LOGO_HEADER}}
+      <div class="flex items-center gap-2">
+        <a href="#aplicacoes" class="hidden text-sm text-link no-underline hover:underline sm:inline">Aplicações</a>
+        {{THEME_TOGGLE}}
+      </div>
+    </div>
+  </header>
+
+  <main id="conteudo" class="mx-auto max-w-6xl space-y-10 px-3 py-8 sm:px-4 md:space-y-12">
+
+    <!-- brand-kit:cover · prova viva do sistema, não um segundo manual. -->
+    <section aria-labelledby="kit-title">
+      <p class="text-xs font-semibold uppercase tracking-widest text-accent">Kit de marca</p>
+      <h1 id="kit-title" class="mt-2 max-w-3xl text-3xl font-semibold tracking-tight md:text-5xl">{{TITLE}}</h1>
+      <p class="mt-3 max-w-2xl text-lg text-fg-muted">{{PURPOSE}}</p>
+      <p class="mt-2 max-w-2xl text-sm text-fg-muted">Prova viva dos mesmos tokens e componentes em light e dark. Use como menu de formatos: cada seção aponta para uma aplicação real.</p>
+      <ul class="mt-4 flex flex-wrap gap-2" aria-label="Atributos da marca">
+        {{ATTRIBUTE_CHIPS}}
+      </ul>
+    </section>
+
+    <!-- brand-kit:logo · variantes aprovadas e área de respiro. -->
+    <section aria-labelledby="logo" class="border-t border-line pt-8">
+      <h2 id="logo" class="text-2xl font-semibold tracking-tight md:text-3xl">Logo</h2>
+      <p class="mt-2 max-w-3xl text-fg-muted">A área de respiro é igual a S ({{LOGO_BREATHING}}) em todos os lados; nada entra nessa margem. Uma cor via <code class="text-link">currentColor</code>, sem sombra, gradiente ou contorno.</p>
+      <div class="mt-6 grid gap-4 md:grid-cols-3">
+        <div class="rounded-lg border border-line bg-surface p-4">
+          <p class="text-xs font-semibold uppercase tracking-widest text-fg-subtle">C · símbolo + wordmark</p>
+          <div class="mt-3">{{LOGO_C}}</div>
+        </div>
+        <div class="rounded-lg border border-line bg-surface p-4">
+          <p class="text-xs font-semibold uppercase tracking-widest text-fg-subtle">B · monograma</p>
+          <div class="mt-3">{{LOGO_B}}</div>
+        </div>
+        <div class="rounded-lg border border-line bg-surface p-4">
+          <p class="text-xs font-semibold uppercase tracking-widest text-fg-subtle">A · wordmark</p>
+          <div class="mt-3">{{LOGO_A}}</div>
+        </div>
+      </div>
+      <div class="mt-6 flex flex-wrap items-end gap-6">
+        {{LOGO_SIZE_SAMPLES}}
+      </div>
+      <p class="mt-2 text-xs text-fg-subtle">16px · 24px · 48px — a marca não encolhe abaixo de 16px; a borda tracejada representa a área S.</p>
+    </section>
+
+    <!-- brand-kit:cores · papéis semânticos, não uma lista de HEX soltos. -->
+    <section aria-labelledby="cores" class="border-t border-line pt-8">
+      <h2 id="cores" class="text-2xl font-semibold tracking-tight md:text-3xl">Cores</h2>
+      <p class="mt-2 max-w-3xl text-fg-muted">Cada papel existe para uma decisão: ação, destaque, superfície, texto e linha. A paleta nomeada e os pares aprovados estão no manual; aqui o que importa é o papel em uso.</p>
+      <ul class="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
+        <li class="rounded-lg border border-line bg-surface p-2">
+          <div class="h-12 rounded-md" style="background-color: var(--b-primary)" role="img" aria-label="Amostra da cor de ação"></div>
+          <p class="mt-2 text-sm font-medium">Ação</p>
+          <code class="text-xs text-fg-subtle">--b-primary</code>
+        </li>
+        <li class="rounded-lg border border-line bg-surface p-2">
+          <div class="h-12 rounded-md bg-accent" role="img" aria-label="Amostra da cor de destaque"></div>
+          <p class="mt-2 text-sm font-medium">Destaque</p>
+          <code class="text-xs text-fg-subtle">--b-accent</code>
+        </li>
+        <li class="rounded-lg border border-line bg-surface p-2">
+          <div class="h-12 rounded-md bg-highlight" role="img" aria-label="Amostra da cor de realce"></div>
+          <p class="mt-2 text-sm font-medium">Realce</p>
+          <code class="text-xs text-fg-subtle">--b-highlight</code>
+        </li>
+        <li class="rounded-lg border border-line bg-surface p-2">
+          <div class="h-12 rounded-md bg-band" role="img" aria-label="Amostra da cor de faixa"></div>
+          <p class="mt-2 text-sm font-medium">Faixa</p>
+          <code class="text-xs text-fg-subtle">--b-band</code>
+        </li>
+        <li class="rounded-lg border border-line bg-surface p-2">
+          <div class="h-12 rounded-md border border-line bg-canvas" role="img" aria-label="Amostra da cor de fundo"></div>
+          <p class="mt-2 text-sm font-medium">Fundo</p>
+          <code class="text-xs text-fg-subtle">--b-canvas</code>
+        </li>
+        <li class="rounded-lg border border-line bg-surface p-2">
+          <div class="h-12 rounded-md border border-line bg-surface" role="img" aria-label="Amostra da superfície"></div>
+          <p class="mt-2 text-sm font-medium">Superfície</p>
+          <code class="text-xs text-fg-subtle">--b-surface</code>
+        </li>
+        <li class="rounded-lg border border-line bg-surface p-2">
+          <div class="h-12 rounded-md bg-surface-muted" role="img" aria-label="Amostra da superfície suave"></div>
+          <p class="mt-2 text-sm font-medium">Superfície suave</p>
+          <code class="text-xs text-fg-subtle">--b-surface-muted</code>
+        </li>
+        <li class="rounded-lg border border-line bg-surface p-2">
+          <div class="h-12 rounded-md bg-primary-soft" role="img" aria-label="Amostra da cor de ação suave"></div>
+          <p class="mt-2 text-sm font-medium">Ação suave</p>
+          <code class="text-xs text-fg-subtle">--b-primary-soft</code>
+        </li>
+      </ul>
+    </section>
+
+    <!-- brand-kit:feedback · estado, não decoração. -->
+    <section aria-labelledby="feedback" class="border-t border-line pt-8">
+      <h2 id="feedback" class="text-2xl font-semibold tracking-tight md:text-3xl">Feedback</h2>
+      <p class="mt-2 max-w-3xl text-fg-muted">Quatro estados, cada um com fundo e texto derivados para AA. Feedback só aparece quando algo muda; não é enfeite de seção.</p>
+      <div class="mt-6 grid gap-3 sm:grid-cols-2 md:grid-cols-4">
+        <div class="rounded-lg bg-success-soft p-3">
+          <p class="flex items-center gap-2 text-sm font-semibold text-on-success-soft">
+            <iconify-icon icon="fluent:checkmark-circle-24-regular" aria-hidden="true" class="text-base text-success"></iconify-icon>
+            Sucesso
+          </p>
+          <p class="mt-1 text-sm text-fg-muted">[placeholder — confirmação com o próximo passo.]</p>
+        </div>
+        <div class="rounded-lg bg-warning-soft p-3">
+          <p class="flex items-center gap-2 text-sm font-semibold text-on-warning-soft">
+            <iconify-icon icon="fluent:warning-24-regular" aria-hidden="true" class="text-base text-warning"></iconify-icon>
+            Atenção
+          </p>
+          <p class="mt-1 text-sm text-fg-muted">[placeholder — o risco e como evitá-lo.]</p>
+        </div>
+        <div class="rounded-lg bg-danger-soft p-3">
+          <p class="flex items-center gap-2 text-sm font-semibold text-on-danger-soft">
+            <iconify-icon icon="fluent:error-circle-24-regular" aria-hidden="true" class="text-base text-danger"></iconify-icon>
+            Erro
+          </p>
+          <p class="mt-1 text-sm text-fg-muted">[placeholder — o que falhou e o que fazer agora.]</p>
+        </div>
+        <div class="rounded-lg bg-info-soft p-3">
+          <p class="flex items-center gap-2 text-sm font-semibold text-on-info-soft">
+            <iconify-icon icon="fluent:info-24-regular" aria-hidden="true" class="text-base text-info"></iconify-icon>
+            Informação
+          </p>
+          <p class="mt-1 text-sm text-fg-muted">[placeholder — contexto que evita uma dúvida.]</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- brand-kit:graficos · chart-1..8; uma série destacada e fallback textual. -->
+    <section aria-labelledby="graficos" class="border-t border-line pt-8">
+      <h2 id="graficos" class="text-2xl font-semibold tracking-tight md:text-3xl">Gráficos</h2>
+      <p class="mt-2 max-w-3xl text-fg-muted">A série de dados usa a paleta de gráficos, com uma cor destacada e o restante em apoio. Rótulos diretos; tabela ou resumo textual quando o gráfico não for acessível.</p>
+      <div class="mt-4 flex flex-wrap gap-2">
+        <div class="h-10 w-10 rounded-md bg-chart-1" role="img" aria-label="chart-1"></div>
+        <div class="h-10 w-10 rounded-md bg-chart-2" role="img" aria-label="chart-2"></div>
+        <div class="h-10 w-10 rounded-md bg-chart-3" role="img" aria-label="chart-3"></div>
+        <div class="h-10 w-10 rounded-md bg-chart-4" role="img" aria-label="chart-4"></div>
+        <div class="h-10 w-10 rounded-md bg-chart-5" role="img" aria-label="chart-5"></div>
+        <div class="h-10 w-10 rounded-md bg-chart-6" role="img" aria-label="chart-6"></div>
+        <div class="h-10 w-10 rounded-md bg-chart-7" role="img" aria-label="chart-7"></div>
+        <div class="h-10 w-10 rounded-md bg-chart-8" role="img" aria-label="chart-8"></div>
+      </div>
+      <figure class="mt-6 rounded-lg border border-line bg-surface p-4">
+        <canvas id="kit-chart" height="220" role="img" aria-label="[placeholder — série de exemplo; os valores também aparecem na tabela de tipografia e no texto.]"></canvas>
+        <figcaption class="mt-3 text-xs text-fg-subtle">[placeholder — fonte e período; a série destacada é a única com peso visual.]</figcaption>
+      </figure>
+      {{CHART_SCRIPT}}
+      <script>
+        document.addEventListener("DOMContentLoaded", function () {
+          if (!window.BrandCharts) return;
+          BrandCharts.create("kit-chart", {
+            type: "line",
+            data: {
+              labels: ["[01]", "[02]", "[03]", "[04]", "[05]"],
+              datasets: [{ label: "[placeholder — série]", data: [0, 0, 0, 0, 0], tension: 0.3, fill: false }]
+            },
+            options: {
+              plugins: { legend: { display: false } },
+              scales: { y: { beginAtZero: true } }
+            }
+          });
+        });
+      </script>
+    </section>
+
+    <!-- brand-kit:tipografia · display, corpo e a escala gerada. -->
+    <section aria-labelledby="tipografia" class="border-t border-line pt-8">
+      <h2 id="tipografia" class="text-2xl font-semibold tracking-tight md:text-3xl">Tipografia</h2>
+      <div class="mt-6 grid gap-4 md:grid-cols-2">
+        <div class="rounded-lg border border-line bg-surface p-4">
+          <p class="text-xs font-semibold uppercase tracking-widest text-fg-subtle">Display</p>
+          <p class="mt-2 font-display text-2xl font-semibold">{{FONT_DISPLAY}}</p>
+          <p class="mt-2 text-4xl font-display font-semibold">Aa</p>
+          <p class="mt-2 text-xs text-fg-muted">Títulos e números. Uma família só; não misture com outra display.</p>
+        </div>
+        <div class="rounded-lg border border-line bg-surface p-4">
+          <p class="text-xs font-semibold uppercase tracking-widest text-fg-subtle">Corpo</p>
+          <p class="mt-2 text-2xl">{{FONT_BODY}}</p>
+          <p class="mt-2 text-fg-muted">Leitura contínua, entrelinha acoplada ao tamanho. [placeholder — um parágrafo curto de amostra.]</p>
+          <p class="mt-2 text-xs text-fg-muted">Escala: tamanho = {{SCALE_BASE}} × {{SCALE_RATIO}}<sup>n</sup>; entrelinha = 1,6 − 0,07n, com piso de 1,05.</p>
+        </div>
+      </div>
+      <div class="be-scroll-x mt-6 rounded-lg border border-line bg-surface">
+        <table class="be-table min-w-[520px]">
+          <caption>Escala tipográfica gerada a partir de base e razão aprovadas.</caption>
+          <thead>
+            <tr>
+              <th scope="col">Token</th>
+              <th scope="col">Tamanho</th>
+              <th scope="col">Entrelinha</th>
+              <th scope="col">Amostra</th>
+            </tr>
+          </thead>
+          <tbody>
+            {{TYPE_ROWS}}
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- brand-kit:icones · Iconify com currentColor; nunca ícone sozinho sem nome. -->
+    <section aria-labelledby="icones" class="border-t border-line pt-8">
+      <h2 id="icones" class="text-2xl font-semibold tracking-tight md:text-3xl">Ícones</h2>
+      <p class="mt-2 max-w-3xl text-fg-muted">A família e o peso vêm do brand.json; o equivalente semântico fica em <code class="text-link">assets/icons.json</code>. Um ícone usa <code class="text-link">currentColor</code>, herda o tamanho do texto e nunca é o único portador de significado.</p>
+      <ul class="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-6">
+        <li class="flex items-center gap-2 rounded-md border border-line bg-surface p-2 text-sm">
+          <iconify-icon icon="fluent:home-24-regular" aria-hidden="true" class="text-lg text-fg-muted"></iconify-icon>
+          início
+        </li>
+        <li class="flex items-center gap-2 rounded-md border border-line bg-surface p-2 text-sm">
+          <iconify-icon icon="fluent:search-24-regular" aria-hidden="true" class="text-lg text-fg-muted"></iconify-icon>
+          busca
+        </li>
+        <li class="flex items-center gap-2 rounded-md border border-line bg-surface p-2 text-sm">
+          <iconify-icon icon="fluent:settings-24-regular" aria-hidden="true" class="text-lg text-fg-muted"></iconify-icon>
+          ajustes
+        </li>
+        <li class="flex items-center gap-2 rounded-md border border-line bg-surface p-2 text-sm">
+          <iconify-icon icon="fluent:people-24-regular" aria-hidden="true" class="text-lg text-fg-muted"></iconify-icon>
+          pessoas
+        </li>
+        <li class="flex items-center gap-2 rounded-md border border-line bg-surface p-2 text-sm">
+          <iconify-icon icon="fluent:data-line-24-regular" aria-hidden="true" class="text-lg text-fg-muted"></iconify-icon>
+          dados
+        </li>
+        <li class="flex items-center gap-2 rounded-md border border-line bg-surface p-2 text-sm">
+          <iconify-icon icon="fluent:calendar-24-regular" aria-hidden="true" class="text-lg text-fg-muted"></iconify-icon>
+          agenda
+        </li>
+      </ul>
+      <ul class="mt-3 list-disc space-y-1 pl-4 text-sm text-fg-muted">
+        <li>Decorativo: <code class="text-link">aria-hidden="true"</code>, sem nome duplicado no leitor de tela.</li>
+        <li>Com significado: <code class="text-link">aria-label</code> curto ou rótulo textual adjacente.</li>
+        <li>Offline os ícones do CDN não renderizam; o rótulo textual precisa continuar fazendo sentido.</li>
+      </ul>
+    </section>
+
+    <!-- brand-kit:imagem · placehold.co com as cores da marca até o asset real existir. -->
+    <section aria-labelledby="imagem" class="border-t border-line pt-8">
+      <h2 id="imagem" class="text-2xl font-semibold tracking-tight md:text-3xl">Imagem</h2>
+      <p class="mt-2 max-w-3xl text-fg-muted">O tratamento deriva do território: {{TERRITORY}}. Pessoa e produto reais; nenhum banco de imagem sem direito de uso. Enquanto o asset real não existe, o placeholder herda as cores da marca e entra na nota de entrega.</p>
+      <div class="mt-6">
+        {{IMAGE_SAMPLE}}
+      </div>
+      <ul class="mt-3 list-disc space-y-1 pl-4 text-sm text-fg-muted">
+        <li>Luz natural ou uma fonte direcional; sem filtro que mude a cor da pele.</li>
+        <li>Contraste suficiente para texto sobreposto; se não houver, use faixa sólida.</li>
+        <li><code class="text-link">alt</code> descreve a intenção da imagem, não o arquivo.</li>
+      </ul>
+    </section>
+
+    <!-- brand-kit:componentes · os mesmos componentes do manual, em uso. -->
+    <section aria-labelledby="componentes" class="border-t border-line pt-8">
+      <h2 id="componentes" class="text-2xl font-semibold tracking-tight md:text-3xl">Componentes</h2>
+      <p class="mt-2 max-w-3xl text-fg-muted">Ações, campos, cartões, callouts, tabelas, KPIs e estados usam os mesmos tokens e a mesma hierarquia. O catálogo completo está em <code class="text-link">references/components.md</code>.</p>
+
+      <div class="mt-6 grid gap-4 md:grid-cols-2">
+        <div class="rounded-lg border border-line bg-surface p-4">
+          <h3 class="text-lg font-semibold">Ações</h3>
+          <div class="mt-3 flex flex-wrap items-center gap-2">
+            <a href="#conteudo" class="inline-flex h-6 items-center rounded-md bg-primary px-3 text-sm font-semibold text-on-primary no-underline hover:bg-primary-hover">Primária</a>
+            <a href="#conteudo" class="inline-flex h-6 items-center rounded-md border border-line-input px-3 text-sm font-semibold text-fg no-underline hover:bg-surface-muted">Secundária</a>
+            <a href="#conteudo" class="text-sm text-link">Ação terciária</a>
+          </div>
+        </div>
+        <div class="rounded-lg border border-line bg-surface p-4">
+          <h3 class="text-lg font-semibold">Campos</h3>
+          <label for="kit-campo" class="mt-3 block text-sm font-medium">[placeholder — rótulo do campo]</label>
+          <input id="kit-campo" name="campo" type="text" class="mt-1 h-6 w-full rounded-md border border-line-input bg-surface px-2 text-sm text-fg">
+          <p class="mt-1 text-xs text-fg-subtle">[placeholder — ajuda curta, sempre visível.]</p>
+        </div>
+      </div>
+
+      <div class="mt-4 grid gap-4 md:grid-cols-2">
+        <div class="rounded-lg bg-info-soft p-3">
+          <p class="flex items-center gap-2 text-sm font-semibold text-on-info-soft">
+            <iconify-icon icon="fluent:info-24-regular" aria-hidden="true" class="text-base text-info"></iconify-icon>
+            Callout
+          </p>
+          <p class="mt-1 text-sm text-fg-muted">[placeholder — contexto que muda a decisão de quem lê.]</p>
+        </div>
+        <div class="flex flex-wrap items-center gap-2 rounded-lg border border-line bg-surface p-3">
+          <span class="rounded-full bg-primary-soft px-2 py-1 text-xs font-medium text-on-primary-soft">Etiqueta</span>
+          <span class="rounded-full bg-success-soft px-2 py-1 text-xs font-medium text-on-success-soft">Concluído</span>
+          <span class="rounded-full border border-line px-2 py-1 text-xs text-fg-muted">Neutra</span>
+        </div>
+      </div>
+
+      <div class="be-scroll-x mt-4 rounded-lg border border-line bg-surface">
+        <table class="be-table min-w-[480px]">
+          <caption>Amostra de tabela — caption descreve o recorte e th nomeia cada coluna.</caption>
+          <thead>
+            <tr>
+              <th scope="col">Item</th>
+              <th scope="col">Status</th>
+              <th scope="col" class="text-right">Valor</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="font-medium">[placeholder — item A]</td>
+              <td>[placeholder — status]</td>
+              <td class="text-right tabular-nums">[00]</td>
+            </tr>
+            <tr>
+              <td class="font-medium">[placeholder — item B]</td>
+              <td>[placeholder — status]</td>
+              <td class="text-right tabular-nums">[00]</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="mt-4 grid gap-4 md:grid-cols-2">
+        <div class="rounded-lg border border-dashed border-line-strong bg-surface p-6 text-center">
+          <iconify-icon icon="fluent:document-24-regular" aria-hidden="true" class="text-2xl text-fg-subtle"></iconify-icon>
+          <p class="mt-2 text-sm font-semibold">Nada por aqui ainda</p>
+          <p class="mt-1 text-sm text-fg-muted">[placeholder — a saída do estado vazio.]</p>
+        </div>
+        <div role="status" aria-live="polite" class="rounded-lg border border-line bg-surface p-4">
+          <span class="sr-only">Carregando…</span>
+          <div class="h-2 w-2/3 animate-pulse rounded-full bg-surface-muted"></div>
+          <div class="mt-2 h-2 w-full animate-pulse rounded-full bg-surface-muted"></div>
+          <div class="mt-2 h-2 w-4/6 animate-pulse rounded-full bg-surface-muted"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- brand-kit:aplicacoes · mini cases provam o sistema fora do kit. -->
+    <section aria-labelledby="aplicacoes" class="border-t border-line pt-8">
+      <h2 id="aplicacoes" class="text-2xl font-semibold tracking-tight md:text-3xl">Aplicações</h2>
+      <p class="mt-2 max-w-3xl text-fg-muted">Os mesmos tokens em cinco contextos. Cada peça é um ponto de partida: o agente compõe com <code class="text-link">sections.md</code> e <code class="text-link">components.md</code>, não copia o molde.</p>
+      <div class="mt-6 grid gap-4 md:grid-cols-2">
+
+        <article data-case="onepage" class="rounded-lg border border-line bg-surface p-4">
+          <h3 class="text-lg font-semibold">Landing page</h3>
+          <p class="mt-1 text-sm text-fg-muted">Promessa, prova e uma ação.</p>
+          <div class="mt-3 rounded-md bg-band p-4 text-on-band">
+            <p class="text-xs font-semibold uppercase tracking-widest text-band-accent">{{ATTRIBUTE_LEAD}}</p>
+            <p class="mt-2 text-2xl font-semibold tracking-tight">[placeholder — promessa em uma frase]</p>
+            <p class="mt-2 text-sm text-on-band-muted">[placeholder — para quem e o que muda.]</p>
+            <span class="mt-3 inline-flex h-6 items-center rounded-md bg-highlight px-3 text-sm font-semibold text-on-highlight">[placeholder — ação]</span>
+          </div>
+        </article>
+
+        <article data-case="report" class="rounded-lg border border-line bg-surface p-4">
+          <h3 class="text-lg font-semibold">Relatório</h3>
+          <p class="mt-1 text-sm text-fg-muted">KPIs com base declarada e tabela de apoio.</p>
+          <dl class="mt-3 grid grid-cols-2 gap-3">
+            <div class="border-t-2 border-primary pt-2">
+              <dt class="text-xs text-fg-muted">[placeholder — indicador]</dt>
+              <dd class="mt-1 text-2xl font-semibold tabular-nums">[00%]</dd>
+            </div>
+            <div class="border-t-2 border-line-strong pt-2">
+              <dt class="text-xs text-fg-muted">[placeholder — indicador]</dt>
+              <dd class="mt-1 text-2xl font-semibold tabular-nums">[00]</dd>
+            </div>
+          </dl>
+          <div class="be-scroll-x mt-3 rounded-md border border-line">
+            <table class="be-table min-w-[360px]">
+              <caption>[placeholder — recorte do relatório.]</caption>
+              <thead>
+                <tr>
+                  <th scope="col">Indicador</th>
+                  <th scope="col" class="text-right">Valor</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>[placeholder — indicador A]</td>
+                  <td class="text-right tabular-nums">[00]</td>
+                </tr>
+                <tr>
+                  <td>[placeholder — indicador B]</td>
+                  <td class="text-right tabular-nums">[00]</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </article>
+
+        <article data-case="deck" class="rounded-lg border border-line bg-surface p-4">
+          <h3 class="text-lg font-semibold">Apresentação</h3>
+          <p class="mt-1 text-sm text-fg-muted">Uma ideia por slide, tipo grande.</p>
+          <div class="mt-3 flex aspect-video flex-col justify-between rounded-md bg-band p-4 text-on-band">
+            <span class="text-xs font-semibold uppercase tracking-widest text-band-accent">[placeholder — seção]</span>
+            <p class="text-3xl font-semibold leading-tight tracking-tight md:text-4xl">[placeholder — a frase que fica]</p>
+            <span class="text-xs text-on-band-muted">[placeholder — 01 / 00]</span>
+          </div>
+        </article>
+
+        <article data-case="app" class="rounded-lg border border-line bg-surface p-4">
+          <h3 class="text-lg font-semibold">App</h3>
+          <p class="mt-1 text-sm text-fg-muted">Ritmo compacto, mesma hierarquia.</p>
+          <div class="mt-3 overflow-hidden rounded-md border border-line bg-canvas">
+            <div class="flex items-center justify-between gap-2 border-b border-line bg-surface px-2 py-1">
+              <span class="text-xs font-semibold">[placeholder — produto]</span>
+              <span class="h-2 w-8 rounded-full bg-surface-muted"></span>
+            </div>
+            <div class="grid grid-cols-[6rem_minmax(0,1fr)]">
+              <nav aria-label="Exemplo de navegação do app" class="border-r border-line bg-surface p-2">
+                <ul class="space-y-1 text-xs">
+                  <li class="rounded bg-primary-soft px-1 py-1 text-on-primary-soft">Início</li>
+                  <li class="px-1 py-1 text-fg-muted">Lista</li>
+                  <li class="px-1 py-1 text-fg-muted">Ajustes</li>
+                </ul>
+              </nav>
+              <div class="p-2">
+                <div class="h-2 w-2/3 rounded-full bg-surface-muted"></div>
+                <div class="mt-2 h-2 w-full rounded-full bg-surface-muted"></div>
+                <div class="mt-2 h-2 w-4/6 rounded-full bg-surface-muted"></div>
+              </div>
+            </div>
+          </div>
+        </article>
+
+        <article data-case="social" class="rounded-lg border border-line bg-surface p-4 md:col-span-2">
+          <h3 class="text-lg font-semibold">Social</h3>
+          <p class="mt-1 text-sm text-fg-muted">Mockup quadrado, não export: referência de composição.</p>
+          <div class="mt-3 flex aspect-square w-full max-w-xs flex-col justify-between rounded-md bg-band p-4 text-on-band">
+            <div class="flex items-center justify-between gap-2">
+              {{LOGO_MARK_ONLY}}
+              <span class="text-xs text-on-band-muted">@[placeholder]</span>
+            </div>
+            <div>
+              <p class="text-xs font-semibold uppercase tracking-widest text-band-accent">{{ATTRIBUTE_LEAD}}</p>
+              <p class="mt-2 text-2xl font-semibold leading-tight tracking-tight">[placeholder — uma frase que interrompe o feed]</p>
+            </div>
+            <span class="inline-flex h-6 w-fit items-center rounded-full bg-highlight px-3 text-sm font-semibold text-on-highlight">[placeholder — ação]</span>
+          </div>
+        </article>
+
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="border-t border-line">
+    <div class="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-3 py-4 text-xs text-fg-subtle sm:px-4">
+      <span>{{BRAND_NAME}}</span>
+      <span>Kit vivo gerado a partir de brand.json · [placeholder — versão e data]</span>
+    </div>
+  </footer>
+  {{ICONIFY_SCRIPT}}
+</body>
