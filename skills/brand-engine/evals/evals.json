@@ -1,0 +1,27 @@
+{
+  "skill_name": "brand-engine",
+  "notes": "Run only with approval. The prompts are in English, so every deliverable and gate question must be in English too. Each eval fails if the manual is skipped, if a template is generated before an explicit ok, if a missing fact is invented instead of written as [placeholder], or if check_page.py reports an ERROR.",
+  "evals": [
+    {
+      "id": 0,
+      "tags": ["vague pizzeria", "routes", "landing", "social"],
+      "prompt": "Here is a vague pizzeria brief: I am opening a small wood-fired pizzeria, I only have a loose terracotta color and a photo of the oven, and the name might change. I need a brand I can defend, a manual my partner will approve, and something I can put online this week.",
+      "expected_output": "Ask only the unanswered discovery questions, then propose 2-3 named routes with palette, type direction and a one-line justification each. Do not generate the theme, logo or any HTML before the user picks a route. After the route is picked: brand.json, theme.css, tailwind-theme.css and logo.svg (symbol in one color via currentColor; a monogram tile is a single solid brand fill using bg-primary + text-on-primary, never currentColor-only). Generate manual.html and stop at Gate 2 for an explicit ok before any template. After approval, generate onepage.html (landing sells) and social.html (1080x1080 and 1080x1920 mockups, not PNG export). Keep every unresolved fact such as the final name, address, prices or testimonials as [placeholder] and list them in the delivery note. check_page.py must report zero ERROR on manual, landing and social; state that the browser pass was or was not performed. Reply in English.",
+      "files": ["brand.json", "theme.css", "tailwind-theme.css", "logo.svg", "manual.html", "onepage.html", "social.html"]
+    },
+    {
+      "id": 1,
+      "tags": ["b2b consultancy", "landing", "deck", "report"],
+      "prompt": "I need a brand for a small B2B consultancy that helps industrial clients with operations strategy. I have no logo, only a dark green I like and two reference screenshots. I need a manual, a landing page, a deck for sales meetings and a client report.",
+      "expected_output": "Propose 2-3 routes and wait for the route choice. Then generate brand.json, theme.css, tailwind-theme.css and logo.svg (symbol one color via currentColor; a monogram tile uses bg-primary + text-on-primary, never currentColor-only). Generate manual.html and stop at Gate 2 until the user explicitly says ok; no template before that. After approval, generate onepage.html (landing sells), deck.html (1280x720 slides, presents) and report.html (explains, tables with caption and scoped th). Each format gets its own copy, not the same paragraph reused. Keep unknown client names, metrics, dates and case results as [placeholder] and list them in the delivery note; never invent proof. check_page.py must report zero ERROR on manual, landing, deck and report. Reply in English.",
+      "files": ["brand.json", "theme.css", "tailwind-theme.css", "logo.svg", "manual.html", "onepage.html", "deck.html", "report.html"]
+    },
+    {
+      "id": 2,
+      "tags": ["internal report", "report only"],
+      "prompt": "Internal report only, please: I need a one-off report for our board using our brand, explaining the last quarter. No landing page, no deck and no social posts.",
+      "expected_output": "Still run discovery and the mandatory manual: propose routes, build brand.json, theme.css, tailwind-theme.css and logo.svg (symbol one color via currentColor; a monogram tile uses bg-primary + text-on-primary, never currentColor-only), then generate manual.html and wait for an explicit ok before generating anything else. Generate only report.html (explains, long-form structure, tables with caption and scoped th); do not create onepage, deck or social files. Keep unknown revenue, dates, percentages and names as [placeholder] and list them in the delivery note, with no invented figures. check_page.py must report zero ERROR on manual and report. Reply in English.",
+      "files": ["brand.json", "theme.css", "tailwind-theme.css", "logo.svg", "manual.html", "report.html"]
+    }
+  ]
+}
