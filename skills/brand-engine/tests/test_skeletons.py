@@ -216,6 +216,24 @@ def test_brand_kit_uses_icons_and_image_placeholder() -> None:
     assert "bg-grad-brand" not in page, "brand-kit.html must not invent a gradient"
 
 
+def test_brand_kit_chart_has_a_nonzero_example_series() -> None:
+    page = read("brand-kit.html")
+    assert "labels: [\"Jan\", \"Fev\", \"Mar\", \"Abr\", \"Mai\"]" in page
+    assert "data: [38, 45, 42, 58, 66]" in page
+    assert "data: [0, 0, 0, 0, 0]" not in page, (
+        "the kit chart must not ship a flat all-zero placeholder"
+    )
+    assert "suggestedMin: 30" in page and "suggestedMax: 70" in page
+    assert "Série de exemplo: 38, 45, 42, 58, 66" in page
+
+
+def test_base_table_caption_has_breathing_room() -> None:
+    base = (ASSETS / "base.html").read_text(encoding="utf-8")
+    assert "padding: 12px 16px 8px" in base, (
+        "the table caption must align with the th/td padding"
+    )
+
+
 def test_every_skeleton_has_logo_breathing_comment() -> None:
     pages = sorted(SKELETONS.glob("*.html"))
     assert pages, "no skeletons found"

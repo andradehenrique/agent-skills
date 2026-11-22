@@ -148,7 +148,7 @@
         <div class="h-10 w-10 rounded-md bg-chart-8" role="img" aria-label="chart-8"></div>
       </div>
       <figure class="mt-6 rounded-lg border border-line bg-surface p-4">
-        <canvas id="kit-chart" height="220" role="img" aria-label="[placeholder — série de exemplo; os valores também aparecem na tabela de tipografia e no texto.]"></canvas>
+        <canvas id="kit-chart" height="220" role="img" aria-label="Série de exemplo: 38, 45, 42, 58, 66 ao longo de cinco meses."></canvas>
         <figcaption class="mt-3 text-xs text-fg-subtle">[placeholder — fonte e período; a série destacada é a única com peso visual.]</figcaption>
       </figure>
       {{CHART_SCRIPT}}
@@ -158,12 +158,12 @@
           BrandCharts.create("kit-chart", {
             type: "line",
             data: {
-              labels: ["[01]", "[02]", "[03]", "[04]", "[05]"],
-              datasets: [{ label: "[placeholder — série]", data: [0, 0, 0, 0, 0], tension: 0.3, fill: false }]
+              labels: ["Jan", "Fev", "Mar", "Abr", "Mai"],
+              datasets: [{ label: "Exemplo", data: [38, 45, 42, 58, 66], tension: 0.3, fill: false }]
             },
             options: {
               plugins: { legend: { display: false } },
-              scales: { y: { beginAtZero: true } }
+              scales: { y: { beginAtZero: false, suggestedMin: 30, suggestedMax: 70 } }
             }
           });
         });
