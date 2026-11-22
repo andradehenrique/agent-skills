@@ -28,3 +28,7 @@ Thumbs.db
 
 # Worktrees (isolated dev workspaces, never commit)
 .worktrees/
+
+# Superpowers (local specs, plans and SDD workspace; never commit)
+.superpowers/
+docs/superpowers/
