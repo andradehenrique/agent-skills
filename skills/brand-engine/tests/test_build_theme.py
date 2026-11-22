@@ -121,8 +121,8 @@ def test_applies_defaults() -> None:
     assert model.feedback == "auto"
     assert model.charts == "auto"
     assert model.shadows == "soft"
-    assert model.icons == {"family": "fluent", "style": "regular", "size": 16}
-    assert model.imagery == {"mode": "abstract", "treatment": "", "placeholder": "placehold"}
+    assert model.icons == {"family": "fluent", "size": 16}
+    assert model.imagery == {"mode": "abstract", "treatment": ""}
 
 
 def test_voice_is_optional_with_defaults() -> None:
@@ -334,6 +334,32 @@ def test_rejects_invalid_icon_family() -> None:
         "phosphor",
         "tabler",
     )
+
+
+def test_rejects_removed_icon_style_and_imagery_placeholder() -> None:
+    """Fields removed from the schema fail loudly instead of staying inert."""
+    expect_error(
+        lambda d: d["design"]["icons"].__setitem__("style", "thin"),
+        "unknown",
+        "design.icons",
+    )
+    expect_error(
+        lambda d: d["design"]["imagery"].__setitem__("placeholder", "placehold"),
+        "unknown",
+        "design.imagery",
+    )
+
+
+def test_language_defaults_and_validates() -> None:
+    mod = builder()
+    data = brand_data()
+    assert mod._build_model(data).language == "pt-BR"
+
+    data["language"] = "en"
+    assert mod._build_model(data).language == "en"
+
+    data["language"] = "pt_BR"
+    expect_error(lambda d: d.__setitem__("language", "pt_BR"), "BCP-47")
 
 
 def test_rejects_invalid_composition_direction() -> None:

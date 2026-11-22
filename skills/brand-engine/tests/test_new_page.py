@@ -191,6 +191,150 @@ def test_placehold_theme_swap() -> None:
     assert "data-placehold-dark=" not in light_only
 
 
+def test_social_placehold_uses_brand_colors() -> None:
+    data = brand("forno-e-brasa")
+    canvas = data["design"]["colors"]["canvas"]["hex"].lstrip("#").upper()
+    primary = data["design"]["colors"]["primary"]["hex"].lstrip("#").upper()
+
+    html = render("social")
+    urls = re.findall(r"https://placehold\.co/[^\s\"'<>]+", html)
+    assert urls, "social needs a placehold.co image sample"
+    assert any(canvas in url and primary in url for url in urls), urls
+    assert any("1080x1350" in url for url in urls), urls
+
+
+def test_imagery_mode_none_renders_texture_note() -> None:
+    for fmt in ("manual", "brand-kit", "social"):
+        html = render(fmt, fixture="brutalist")
+        assert "https://placehold.co" not in html, (
+            f"{fmt} must not ship photo placeholders when imagery.mode is none"
+        )
+        assert "textura" in html, f"{fmt} must explain the CSS texture instead"
+
+
+# ---------------------------------------------------------------------------
+# Voice, type and logo fields reach the output
+# ---------------------------------------------------------------------------
+
+
+def test_manual_wires_voice_and_logo_name() -> None:
+    html = render("manual")
+    assert "Fala de forno, farinha e bairro" in html
+    assert "matéria concreta" in html
+    assert "gourmetização" in html
+    assert 'data-logo-name="Chama"' in html
+
+
+def test_type_weight_tracking_and_case_reach_css() -> None:
+    data = json.loads(json.dumps(brand("forno-e-brasa")))
+    data["design"]["type"]["display"].update(
+        {"weight": 700, "tracking": "0.2em", "case": "lowercase"}
+    )
+    data["design"]["type"]["body"].update(
+        {"weight": 300, "tracking": "0.05em", "case": "uppercase"}
+    )
+
+    html = generator().render_page("blank", data, "Tipografia", None)
+    assert "--b-weight-display: 700;" in html
+    assert "--b-tracking-display: 0.2em;" in html
+    assert "--b-case-display: lowercase;" in html
+    assert "--b-weight-body: 300;" in html
+    assert "--b-tracking-body: 0.05em;" in html
+    assert "--b-case-body: uppercase;" in html
+    assert "font-weight: var(--b-weight-display)" in html
+    assert "letter-spacing: var(--b-tracking-body)" in html
+    assert "text-transform: var(--b-case-display)" in html
+
+
+def test_manual_spacing_follows_the_theme_unit() -> None:
+    unit_4 = render("manual", fixture="brutalist")
+    assert "A unidade é 4px" in unit_4
+    assert "todos múltiplos de 4px" in unit_4
+    assert "<td>--b-space-1</td><td>4px</td>" in unit_4
+    assert "<td>--b-space-2</td><td>8px</td>" in unit_4
+    assert "<td>--b-space-1</td><td>8px</td>" not in unit_4
+
+    unit_8 = render("manual")
+    assert "A unidade é 8px" in unit_8
+    assert "<td>--b-space-1</td><td>8px</td>" in unit_8
+
+
+def test_language_field_renders_html_lang() -> None:
+    data = json.loads(json.dumps(brand("forno-e-brasa")))
+    data["language"] = "en"
+    html = generator().render_page("blank", data, "English page", None)
+    assert '<html lang="en"' in html
+
+    assert '<html lang="pt-BR"' in render("blank")
+
+
+# ---------------------------------------------------------------------------
+# Defaults-filled model
+# ---------------------------------------------------------------------------
+
+
+def test_every_format_accepts_a_minimal_brand() -> None:
+    """A brand accepted by render_theme must also be accepted by render_page."""
+
+    minimal = {
+        "version": 2,
+        "purpose": "Explicar o mínimo.",
+        "persona": "Quem lê.",
+        "territory": "claro e direto",
+        "archetype": "Sábio",
+        "attributes": ["claro"],
+        "design": {
+            "colors": {
+                "canvas": {"name": "Papel", "hex": "#FFFFFF"},
+                "surface": {"name": "Branco", "hex": "#FFFFFF"},
+                "ink": {"name": "Tinta", "hex": "#111111"},
+                "primary": {"name": "Azul", "hex": "#0B5CAB"},
+            }
+        },
+        "aceite": False,
+    }
+    mod = generator()
+    built = mod.render_theme(minimal)
+    assert "--b-canvas:" in built.theme_css
+
+    for fmt in EXPECTED_FORMATS:
+        html = mod.render_page(fmt, minimal, "Mínima", None)
+        assert f'data-format="{fmt}"' in html, fmt
+        assert not re.search(r"\{\{[A-Z0-9_]+\}\}", html), fmt
+
+
+# ---------------------------------------------------------------------------
+# Post-delivery restyle
+# ---------------------------------------------------------------------------
+
+
+def test_restyle_updates_theme_blocks_and_preserves_body() -> None:
+    mod = generator()
+    with tempfile.TemporaryDirectory() as tmp:
+        target = Path(tmp) / "page.html"
+        generate("blank", target)
+        original = target.read_text(encoding="utf-8")
+        marker = original.replace(
+            "</main>", '<p id="copy-marker">COPY PRESERVADA</p></main>'
+        )
+        assert marker != original
+        target.write_text(marker, encoding="utf-8")
+
+        data = json.loads((FIXTURES / "forno-e-brasa.brand.json").read_text(encoding="utf-8"))
+        data["design"]["colors"]["primary"]["hex"] = "#123456"
+        brand_file = Path(tmp) / "brand.json"
+        brand_file.write_text(json.dumps(data), encoding="utf-8")
+
+        mod.restyle(target, brand_file)  # in place, no --force
+
+        restyled = target.read_text(encoding="utf-8")
+        assert "COPY PRESERVADA" in restyled
+        assert 'id="copy-marker"' in restyled
+        assert "#123456" in restyled
+        assert "#A6402F" not in restyled
+        assert "text-transform: var(--b-case-display)" in restyled
+
+
 # ---------------------------------------------------------------------------
 # Theme modes
 # ---------------------------------------------------------------------------

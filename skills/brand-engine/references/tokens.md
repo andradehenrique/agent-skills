@@ -36,6 +36,7 @@ blocks and the v1 top-level keys are rejected; top-level metadata is ignored.
 |---|---|
 | `version` | Exactly `2`. |
 | `name` | Optional brand name; defaults to `Brand`. |
+| `language` | Optional BCP-47 tag (`pt-BR` default, `en`, `es-419`); emitted as `<html lang>`. |
 | `purpose`, `persona`, `territory`, `archetype` | One or two sentences each. |
 | `attributes` | Non-empty list of short strings. |
 | `voice` | Optional object: `summary` (required when present), `principles[]`, `avoid[]`, `person` (default `você`), `emoji` (`none` or `social-only`). |
@@ -101,7 +102,8 @@ blocks and the v1 top-level keys are rejected; top-level metadata is ignored.
 
 - `display` and `body` each take `family` (one name), `fallback`, `weight`
   (multiple of 100), `tracking` and `case` (`none`/`uppercase`/`lowercase`/
-  `capitalize`). Display and body may share a family.
+  `capitalize`). The generated `theme.css` applies them through `--b-weight-*`,
+  `--b-tracking-*` and `--b-case-*`; headings use display, body copy uses body.
 - `scale.base` is 12–32; `scale.ratio` is 1.05–1.8. The default is 16/1.25.
 - Twelve steps, `xs` through `8xl`, at exponents `n = -2 … 9`:
 
@@ -110,10 +112,8 @@ size    = round(base * ratio^n)
 leading = 1.6                          when n <= 0
 leading = max(1.05, 1.6 - 0.07 * n)    when n > 0
 ```
-
-`theme.css` emits `--b-text-<step>` and `--b-leading-<step>`;
-`tailwind-theme.css` couples them as `text-<step>`. `7xl`/`8xl` exist for hero
-and deck headlines. Body reading uses `text-base` or larger.
+`theme.css` emits `--b-text-<step>` and `--b-leading-<step>`; `tailwind-theme.css`
+couples them as `text-<step>`; `7xl`/`8xl` serve hero/deck and body uses `text-base`+.
 
 ### shape — radius, unit, shadows
 
@@ -150,15 +150,14 @@ and deck headlines. Body reading uses `text-base` or larger.
 "gradient": {"from": "Petróleo", "to": "Areia", "angle": 45, "via": null}
 ```
 
-`from` and `to` accept a color name, slug or `#RRGGBB`; `via` is optional;
-`angle` is 0–360 (default 45).
+`from` and `to` accept a color name, slug or `#RRGGBB`; `via` is optional; `angle` is 0–360 (default 45).
 
 ### icons, imagery, composition, logo
 
 | Block | Values |
 |---|---|
-| `icons` | `family`: `fluent`/`lucide`/`phosphor`/`tabler`; `style` (e.g. `regular`); `size` 8–64 (default 16). Icons are Iconify web components, SVG with `currentColor`, tinted by `text-*`. |
-| `imagery` | `mode`: `photo`/`illustration`/`abstract`/`none`; `treatment` (free text); `placeholder` (default `placehold`). Use `placehold.co` while the real asset is missing. |
+| `icons` | `family`: `fluent`/`lucide`/`phosphor`/`tabler`; `size` 8–64 (default 16). Icons are Iconify web components, SVG with `currentColor`, tinted by `text-*`. |
+| `imagery` | `mode`: `photo`/`illustration`/`abstract`/`none`; `treatment` (free text). `none` renders a CSS texture note instead of a photo placeholder. |
 | `composition` | `direction`: `editorial`/`structured`/`poster`/`minimal`; `measure` (default `65ch`); `grid` (default `"12"`). Direction guides sections, grid and rhythm; it does not select a different skeleton file. |
 | `logo` | `variant`: `C`/`B`/`A`; `name`; `notes`. Resolve by the cascade in `logo.md`. |
 
@@ -168,6 +167,7 @@ and deck headlines. Body reading uses `text-base` or larger.
 {
   "version": 2,
   "name": "Omnia Labs",
+  "language": "pt-BR",
   "purpose": "Traduzir IA em operação real para empresas que precisam decidir agora.",
   "persona": "Donos e diretores de PMEs que já sentem a pressão da IA.",
   "territory": "editorial humanista com precisão técnica",
@@ -198,8 +198,8 @@ and deck headlines. Body reading uses `text-base` or larger.
     },
     "shape": {"radius": "soft", "unit": 8, "shadows": "soft"},
     "theme": {"modes": ["light", "dark"], "default": "light", "gradient": null},
-    "icons": {"family": "fluent", "style": "regular", "size": 16},
-    "imagery": {"mode": "abstract", "treatment": "papel, grão leve", "placeholder": "placehold"},
+    "icons": {"family": "fluent", "size": 16},
+    "imagery": {"mode": "abstract", "treatment": "papel, grão leve"},
     "composition": {"direction": "editorial", "measure": "65ch", "grid": "12"},
     "logo": {"variant": "C", "name": "Colchete", "notes": "Dois colchetes e um bloco."}
   },

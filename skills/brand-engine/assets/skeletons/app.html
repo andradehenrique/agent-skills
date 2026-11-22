@@ -221,8 +221,10 @@
           </section>
         </div>
 
-        <!-- app:error · mantém o último estado válido visível e diz o próximo passo. -->
-        <div data-state="error" role="alert" class="mt-4 flex items-start gap-2 rounded-lg border border-line bg-danger-soft p-3">
+        <!-- app:error · mantém o último estado válido visível e diz o próximo passo.
+             Galeria estática: sem role="alert" para não anunciar no carregamento;
+             um erro real usa role="alert" apenas quando a falha acontece. -->
+        <div data-state="error" class="mt-4 flex items-start gap-2 rounded-lg border border-line bg-danger-soft p-3">
           <iconify-icon icon="fluent:error-circle-24-regular" aria-hidden="true" class="mt-1 text-base text-danger"></iconify-icon>
           <div class="min-w-0">
             <p class="text-sm font-semibold text-on-danger-soft">[placeholder — o que falhou, em uma frase]</p>

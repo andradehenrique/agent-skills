@@ -59,9 +59,14 @@ def test_deck_uses_7xl_or_8xl() -> None:
     )
 
 
-def test_social_uses_placehold() -> None:
+def test_social_uses_image_sample_slot() -> None:
     page = read("social.html")
-    assert "placehold.co" in page, "social.html needs a placehold.co image placeholder"
+    assert "{{SOCIAL_IMAGE}}" in page, (
+        "social.html needs the {{SOCIAL_IMAGE}} slot so the generator can honor imagery.mode"
+    )
+    assert "placehold.co" not in page, (
+        "social.html must not hardcode a placeholder URL; the generator builds it from brand colours"
+    )
 
 
 def test_manual_has_new_sections() -> None:
@@ -81,10 +86,14 @@ def test_manual_has_new_sections() -> None:
             f"manual.html has no heading for {word!r}"
         )
     for placeholder in (
+        "{{VOICE_SUMMARY}}",
+        "{{VOICE_RULES}}",
         "{{FEEDBACK_CARDS}}",
         "{{CHART_SWATCHES}}",
         "{{ICON_SAMPLES}}",
         "{{IMAGE_SAMPLE}}",
+        "{{SPACING_UNIT}}",
+        "{{SPACING_ROWS}}",
         "{{COMPONENT_SAMPLES}}",
         "{{COMPOSITION_RULES}}",
         "{{APPLICATION_CARDS}}",

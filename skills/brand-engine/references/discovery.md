@@ -19,9 +19,10 @@ user can react to.
 - The route already carries the proposed system. Keep one short summary (palette,
   type, shape, composition) next to it; there is no third gate. The manual gate
   remains the only mandatory gate.
-- `brand.json` is the state. "Ajusta X" regenerates the theme, the manual, the
-  brand-kit and the delivered formats, then revalidates, without restarting
-  discovery.
+- `brand.json` is the state. "Ajusta X" updates the manual and the brand-kit,
+  restyles the delivered formats in place (theme blocks only, copy preserved),
+  then revalidates, without restarting discovery. Full regeneration with
+  `--force` only happens when the user explicitly asks for it.
 - Never invent a fact to fill a gap. Ask once; if it stays missing, write
   `[placeholder]` and keep going.
 
@@ -85,7 +86,7 @@ line. Every route uses the same fields so the user can compare:
 | **Forma** | Radius profile (`sharp`/`soft`/`round` or custom), unit `4`/`8`, shadows. |
 | **Composição** | Direction (`editorial`/`structured`/`poster`/`minimal`), measure and grid. |
 | **Ícones** | Family (`fluent`/`lucide`/`phosphor`/`tabler`), style and size. |
-| **Imagem** | Mode (`photo`/`illustration`/`abstract`/`none`), treatment and placeholder. |
+| **Imagem** | Mode (`photo`/`illustration`/`abstract`/`none`) and treatment. |
 | **Por que** | At least two answers from P1–P7 that this route satisfies. |
 | **Formatos** | The 2–3 formats that fit first; `brand-kit` is the proof, not a format choice. |
 | **Risco** | What could go wrong and how you would correct it. |

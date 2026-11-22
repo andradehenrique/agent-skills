@@ -15,7 +15,8 @@ checker infers the brand rules from the page itself:
 - whether dark mode exists from a ``[data-theme="dark"]`` block;
 - whether a brand gradient exists from ``--b-gradient``.
 
-``--brand`` is optional and only adds strict validation of the brand file.
+``--brand`` is optional and only adds strict validation of the brand file,
+including a ``<html lang>``/``brand.json`` ``language`` match.
 
 Rules cover the Task 3 HTML contract:
 
@@ -25,8 +26,9 @@ Rules cover the Task 3 HTML contract:
 - static a11y: accessible names, table ``caption``/``th``/``scope``, duplicate
   ids, dangling ARIA/fragment references, no inline handlers on ``div``;
 - tokens only: no bare hex, palette utilities, raw colours or arbitrary colours
-  in content classes/styles; feedback (``success``/``warning``/``danger``/
-  ``info`` with soft/solid/on variants) and ``chart-1..8`` are allowed;
+  in content classes/styles, inline styles or non-generated ``<style>`` blocks;
+  feedback (``success``/``warning``/``danger``/``info`` with soft/solid/on
+  variants) and ``chart-1..8`` are allowed;
 - type scale: ``text-*`` sizes from the generated scale embedded in the page;
 - spacing: steps on the page's unit scale (unit 8 keeps the coarse scale, unit 4
   allows every whole step) and arbitrary lengths on the unit grid;
@@ -1049,7 +1051,7 @@ def _check_tables(doc: _Document) -> list[str]:
     return findings
 
 
-def _check_tokens(doc: _Document) -> list[str]:
+def _check_tokens(doc: _Document, html: str) -> list[str]:
     findings: list[str] = []
     seen: set[str] = set()
 
@@ -1100,6 +1102,79 @@ def _check_tokens(doc: _Document) -> list[str]:
         if element.get("bgcolor").strip():
             add("bgcolor attribute carries a raw colour", element.line)
 
+    findings.extend(_check_style_tokens(html))
+    return findings
+
+
+STYLE_DECLARATION_RE = re.compile(
+    r"(?P<prop>--?[A-Za-z][\w-]*|[A-Za-z-]+)\s*:\s*(?P<value>[^;{}]+)"
+)
+
+
+def _check_style_tokens(html: str) -> list[str]:
+    """Apply the tokens-only rule to non-generated ``<style>`` blocks.
+
+    The generated ``theme.css`` and ``@theme`` blocks legitimately contain raw
+    hex and rgba values (they define the tokens), so they are skipped. Brand
+    custom properties (``--b-*``) are token definitions; other declarations and
+    utility tokens are checked for bare hex, ``rgb()/hsl()``, named colours and
+    palette/raw utilities.
+    """
+
+    findings: list[str] = []
+    seen: set[str] = set()
+
+    def add(message: str, line: int) -> None:
+        finding = _finding("ERROR", "tokens", message, line)
+        if finding not in seen:
+            seen.add(finding)
+            findings.append(finding)
+
+    for block in STYLE_BLOCK_RE.finditer(html):
+        css = _blank_comments(block.group(1))
+        if "--b-color-" in css or "@theme" in css:
+            continue
+        for match in STYLE_DECLARATION_RE.finditer(css):
+            prop = match.group("prop").lower()
+            value = match.group("value").strip()
+            line = _line_of(html, block.start(1) + match.start("value"))
+            if prop.startswith("--b-"):
+                continue
+            if prop.startswith("--"):
+                if _has_raw_colour(value):
+                    add(f"raw colour in custom property {prop}: {value}", line)
+                continue
+            if prop not in COLOR_PROPERTIES:
+                continue
+            if _has_raw_colour(value):
+                add(f"raw colour in <style> {prop}: {value}", line)
+
+        for apply in re.finditer(r"@apply\s+([^;{}]+)", css):
+            for token in apply.group(1).split():
+                base = _base_class(token)
+                if PALETTE_RE.match(base):
+                    add(
+                        f'palette utility "{token}" in @apply',
+                        _line_of(html, block.start(1) + apply.start()),
+                    )
+                elif RAW_COLOR_RE.match(base):
+                    add(
+                        f'raw colour utility "{token}" in @apply',
+                        _line_of(html, block.start(1) + apply.start()),
+                    )
+
+        for selector in re.finditer(r"\.([A-Za-z][\w-]*(?::[\w-]+)*)", css):
+            base = _base_class(selector.group(1))
+            if PALETTE_RE.match(base):
+                add(
+                    f'palette utility class ".{selector.group(1)}" in <style>',
+                    _line_of(html, block.start(1) + selector.start()),
+                )
+            elif RAW_COLOR_RE.match(base):
+                add(
+                    f'raw colour class ".{selector.group(1)}" in <style>',
+                    _line_of(html, block.start(1) + selector.start()),
+                )
     return findings
 
 
@@ -1353,8 +1428,9 @@ def _check_gradient(doc: _Document, html: str) -> list[str]:
 def _check_sprite(doc: _Document) -> list[str]:
     findings: list[str] = []
     body = doc.body
-    # The app shell is a product surface, not a brand proof: it does not carry
-    # the logo sprite. Brand-facing formats still require it.
+    # Every generated page carries the sprite (the app shell included), but the
+    # sprite contract is enforced only on brand-facing formats: the app is a
+    # product surface, so it stays exempt from the brand-proof requirement.
     if body is None or doc.page_format == "app":
         return findings
 
@@ -1723,14 +1799,28 @@ def _finalize(findings: list[str]) -> list[str]:
     return sorted(unique, key=sort_key)
 
 
-def _check_brand(brand_path: str | Path) -> list[str]:
-    """Optional strict validation: the brand file must exist and parse."""
+def _check_brand(brand_path: str | Path, html: str) -> list[str]:
+    """Optional strict validation: parse the brand and match ``<html lang>``."""
 
     try:
-        build_theme.load_brand(brand_path)
+        data = build_theme.load_brand(brand_path)
     except (build_theme.BrandError, OSError, ValueError) as exc:
         return [_finding("ERROR", "brand", str(exc))]
-    return []
+
+    findings: list[str] = []
+    expected = str(data.get("language") or build_theme.DEFAULT_LANGUAGE)
+    for element in _parse(html).by_tag("html"):
+        actual = element.get("lang").strip()
+        if actual and actual.casefold() != expected.casefold():
+            findings.append(
+                _finding(
+                    "ERROR",
+                    "language",
+                    f'html lang="{actual}" disagrees with brand language "{expected}"',
+                    element.line,
+                )
+            )
+    return findings
 
 
 def check_html(html: str) -> list[str]:
@@ -1747,7 +1837,7 @@ def check_html(html: str) -> list[str]:
     findings.extend(_check_icons(doc))
     findings.extend(_check_images(doc))
     findings.extend(_check_tables(doc))
-    findings.extend(_check_tokens(doc))
+    findings.extend(_check_tokens(doc, html))
     findings.extend(_check_type_scale(doc, html))
     findings.extend(_check_spacing(doc, html))
     findings.extend(_check_gradient(doc, html))
@@ -1770,7 +1860,7 @@ def check_page(
     html = path.read_text(encoding="utf-8")
     findings = check_html(html)
     if brand_path is not None:
-        findings = _finalize(_check_brand(brand_path) + findings)
+        findings = _finalize(_check_brand(brand_path, html) + findings)
     return findings
 
 

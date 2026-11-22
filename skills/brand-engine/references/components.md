@@ -150,12 +150,13 @@ avoid using it as a visual grid when headings would be clearer.
 
 ```html
 <div role="tablist" aria-label="[placeholder — nome das seções]" class="flex gap-1 border-b border-line">
-  <button role="tab" id="tab-a" aria-selected="true" aria-controls="panel-a"
+  <button type="button" role="tab" id="tab-a" aria-selected="true" aria-controls="panel-a"
           class="border-b-2 border-primary px-3 py-2 text-sm font-semibold text-fg">Resumo</button>
-  <button role="tab" id="tab-b" aria-selected="false" aria-controls="panel-b" tabindex="-1"
+  <button type="button" role="tab" id="tab-b" aria-selected="false" aria-controls="panel-b" tabindex="-1"
           class="border-b-2 border-transparent px-3 py-2 text-sm text-fg-muted">Detalhes</button>
 </div>
 <section role="tabpanel" id="panel-a" aria-labelledby="tab-a" class="pt-3">…</section>
+<section role="tabpanel" id="panel-b" aria-labelledby="tab-b" class="pt-3" hidden>…</section>
 ```
 
 **Rules:** one selected tab; the inactive panel is hidden, not removed from the
@@ -188,7 +189,7 @@ value is also text; color alone does not carry completion.
   <ul class="mt-3 space-y-2">
     <li class="grid grid-cols-[8rem_1fr_auto] items-center gap-2 text-sm">
       <span class="text-fg-muted">[placeholder — série A]</span>
-      <span class="h-2 rounded-full bg-chart-1" style="width: 78%"></span>
+      <span class="h-2 rounded-full bg-chart-1" style="width: 78%" aria-hidden="true"></span>
       <span class="tabular-nums">78%</span>
     </li>
   </ul>

@@ -214,6 +214,34 @@ def test_rejects_arbitrary_color() -> None:
     assert_rule(build('<div class="bg-[rgb(10,10,10)]">x</div>'), "tokens")
 
 
+def test_rejects_raw_color_in_style_block() -> None:
+    assert_rule(
+        build(
+            "",
+            head_extra="<style>.evil{color:#ff0000;background:rgb(0,255,0)}</style>",
+        ),
+        "tokens",
+    )
+    assert_rule(
+        build("", head_extra="<style>.evil{background:red}</style>"),
+        "tokens",
+    )
+    assert_rule(
+        build("", head_extra="<style>:root{--evil:#ff0000}</style>"),
+        "tokens",
+    )
+    assert_rule(
+        build("", head_extra="<style>.button{@apply bg-blue-600 text-white}</style>"),
+        "tokens",
+    )
+
+
+def test_generated_theme_style_blocks_are_ignored() -> None:
+    # The token definitions themselves contain hex/rgba values.
+    html = build(gradient=True)
+    assert not has(html, "tokens"), findings(html)
+
+
 def test_accepts_feedback_and_chart_tokens() -> None:
     content = (
         '<p class="mt-2 bg-success-soft p-2 text-success">Salvo</p>'
@@ -538,6 +566,21 @@ def test_cli_brand_flag_is_optional_and_validates() -> None:
 
         api = checker().check_page(clean, BRAND)
         assert api == [], api
+
+
+def test_brand_language_must_match_html_lang() -> None:
+    with tempfile.TemporaryDirectory() as tmp:
+        mismatched = build().replace('lang="pt-BR"', 'lang="en"')
+        page = write(tmp, "lang.html", mismatched)
+        matches = [item for item in checker().check_page(page, BRAND) if "[language]" in item]
+        assert matches, "html lang disagreeing with brand language must be flagged"
+
+        same = write(tmp, "same.html", build())
+        assert checker().check_page(same, BRAND) == []
+
+
+def test_missing_html_lang_is_an_error() -> None:
+    assert_rule(build().replace(' lang="pt-BR"', ""), "a11y")
 
 
 if __name__ == "__main__":

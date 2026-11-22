@@ -11,6 +11,7 @@ Contract (schema v2, the final one -- there is no v1 compatibility)::
     {
       "version": 2,
       "name": "...",                     # optional, defaults to "Brand"
+      "language": "pt-BR",               # optional BCP-47 tag, defaults to pt-BR
       "purpose": "...",                  # required
       "persona": "...",                  # required
       "territory": "...",                # required
@@ -39,8 +40,8 @@ Contract (schema v2, the final one -- there is no v1 compatibility)::
         "theme": {"modes": ["light", "dark"], "default": "light",
                   "gradient": null | {"from": "...", "to": "...",
                                       "angle": 45, "via": "..."}},
-        "icons": {"family": "fluent", "style": "regular", "size": 16},
-        "imagery": {"mode": "abstract", "treatment": "...", "placeholder": "placehold"},
+        "icons": {"family": "fluent", "size": 16},
+        "imagery": {"mode": "abstract", "treatment": "..."},
         "composition": {"direction": "structured", "measure": "65ch", "grid": "12"},
         "logo": {"variant": "C", "name": "...", "notes": "..."}
       },
@@ -60,6 +61,7 @@ traceback: callers use :func:`resolve_brand_path` and
 from __future__ import annotations
 
 import argparse
+import copy
 import json
 import re
 import sys
@@ -125,11 +127,10 @@ DEFAULT_SHADOWS = "soft"
 DEFAULT_MODES: tuple[str, ...] = ("light", "dark")
 DEFAULT_TYPE_FAMILY = "system-ui"
 DEFAULT_SCALE = (16.0, 1.25)
-DEFAULT_ICONS: dict[str, Any] = {"family": "fluent", "style": "regular", "size": 16}
+DEFAULT_ICONS: dict[str, Any] = {"family": "fluent", "size": 16}
 DEFAULT_IMAGERY: dict[str, Any] = {
     "mode": "abstract",
     "treatment": "",
-    "placeholder": "placehold",
 }
 DEFAULT_COMPOSITION: dict[str, Any] = {
     "direction": "structured",
@@ -232,6 +233,10 @@ SEMANTIC_COLOR_KEYS: tuple[str, ...] = (
 ) + tuple(f"chart-{index}" for index in range(1, 9))
 
 _HEX_RE = re.compile(r"^#[0-9a-fA-F]{6}$")
+# Deliberately permissive BCP-47 shape: language (2-3 letters) plus optional
+# alphanumeric subtags. The exact registry is not the skill's job.
+_LANGUAGE_RE = re.compile(r"^[A-Za-z]{2,3}(?:-[A-Za-z0-9]{1,8})*$")
+DEFAULT_LANGUAGE = "pt-BR"
 
 
 class BrandError(ValueError):
@@ -265,6 +270,7 @@ class _Model:
     """
 
     name: str
+    language: str
     purpose: str
     persona: str
     territory: str
@@ -805,18 +811,17 @@ def _parse_theme(
 def _parse_icons(design: dict[str, Any]) -> dict[str, Any]:
     block = design.get("icons", {})
     block = _object(block, "design.icons")
-    _reject_unknown(block, "design.icons", ("family", "style", "size"))
+    _reject_unknown(block, "design.icons", ("family", "size"))
 
     family = _choice(block.get("family", "fluent"), "design.icons.family", ICON_FAMILIES)
-    style = _text(block.get("style", "regular"), "design.icons.style")
     size = _integer(block.get("size", 16), "design.icons.size", 8, 64)
-    return {"family": family, "style": style, "size": size}
+    return {"family": family, "size": size}
 
 
 def _parse_imagery(design: dict[str, Any]) -> dict[str, Any]:
     block = design.get("imagery", {})
     block = _object(block, "design.imagery")
-    _reject_unknown(block, "design.imagery", ("mode", "treatment", "placeholder"))
+    _reject_unknown(block, "design.imagery", ("mode", "treatment"))
 
     mode = _choice(block.get("mode", "abstract"), "design.imagery.mode", IMAGERY_MODES)
 
@@ -826,11 +831,7 @@ def _parse_imagery(design: dict[str, Any]) -> dict[str, Any]:
     if not isinstance(treatment, str):
         raise BrandError("brand.json: design.imagery.treatment must be a string")
 
-    placeholder = _text(
-        block.get("placeholder", DEFAULT_IMAGERY["placeholder"]),
-        "design.imagery.placeholder",
-    )
-    return {"mode": mode, "treatment": treatment.strip(), "placeholder": placeholder}
+    return {"mode": mode, "treatment": treatment.strip()}
 
 
 def _parse_composition(design: dict[str, Any]) -> dict[str, Any]:
@@ -877,6 +878,18 @@ def _parse_logo(design: dict[str, Any]) -> dict[str, str]:
         raise BrandError("brand.json: design.logo.notes must be a string when present")
 
     return {"variant": variant, "name": name.strip(), "notes": notes.strip()}
+
+
+def _parse_language(brand: dict[str, Any]) -> str:
+    value = brand.get("language")
+    if value is None:
+        return DEFAULT_LANGUAGE
+    if not isinstance(value, str) or not _LANGUAGE_RE.match(value.strip()):
+        raise BrandError(
+            "brand.json: language must be a BCP-47 tag such as pt-BR or en "
+            f"(got {value!r})"
+        )
+    return value.strip()
 
 
 def _parse_voice(brand: dict[str, Any]) -> dict[str, Any]:
@@ -929,6 +942,8 @@ def _build_model(brand: Any) -> _Model:
     if brand.get("name") is not None:
         name = _text(brand.get("name"), "name")
 
+    language = _parse_language(brand)
+
     purpose = _text(brand.get("purpose"), "purpose")
     persona = _text(brand.get("persona"), "persona")
     territory = _text(brand.get("territory"), "territory")
@@ -971,6 +986,7 @@ def _build_model(brand: Any) -> _Model:
 
     return _Model(
         name=name,
+        language=language,
         purpose=purpose,
         persona=persona,
         territory=territory,
@@ -1004,6 +1020,87 @@ def _build_model(brand: Any) -> _Model:
 # ---------------------------------------------------------------------------
 # Semantic tokens
 # ---------------------------------------------------------------------------
+
+
+def _stack_family(stack: str) -> str:
+    """Extract the first, quoted family from a generated CSS stack."""
+    return stack.split('"', 2)[1]
+
+
+def _stack_fallback(stack: str, default: str) -> str:
+    """Extract the fallback tail from ``"Family", fallback``."""
+    if '", ' not in stack:
+        return default
+    return stack.split('", ', 1)[1]
+
+
+def normalize_brand(brand: dict[str, Any]) -> dict[str, Any]:
+    """Return a validated brand object with every optional block filled in.
+
+    ``render_theme``/``render_page`` must never raw-access an optional block:
+    the parser defaults ``feedback``, ``charts``, ``type``, ``shape``, ``theme``,
+    ``icons``, ``imagery``, ``composition`` and ``logo``, so the generator
+    consumes this defaults-filled object instead.
+    """
+
+    model = _build_model(brand)
+    design = brand.get("design") or {}
+
+    def type_block(stack: str, weight: int, tracking: str, case: str) -> dict[str, Any]:
+        return {
+            "family": _stack_family(stack),
+            "fallback": _stack_fallback(stack, "sans-serif"),
+            "weight": weight,
+            "tracking": tracking,
+            "case": case,
+        }
+
+    return {
+        "version": 2,
+        "name": model.name,
+        "language": model.language,
+        "purpose": model.purpose,
+        "persona": model.persona,
+        "territory": model.territory,
+        "archetype": model.archetype,
+        "attributes": list(model.attributes),
+        "voice": copy.deepcopy(model.voice),
+        "design": {
+            "colors": copy.deepcopy(design.get("colors") or {}),
+            "feedback": copy.deepcopy(model.feedback),
+            "charts": "auto" if model.charts == "auto" else list(model.charts),
+            "type": {
+                "display": type_block(
+                    model.display_stack,
+                    model.display_weight,
+                    model.tracking[0],
+                    model.case[0],
+                ),
+                "body": type_block(
+                    model.body_stack,
+                    model.body_weight,
+                    model.tracking[1],
+                    model.case[1],
+                ),
+                "scale": {"base": model.scale[0], "ratio": model.scale[1]},
+            },
+            "shape": {
+                "radius": {key: int(value) for key, value in model.radius.items()},
+                "unit": model.unit,
+                "shadows": model.shadows,
+            },
+            "theme": {
+                "modes": list(model.modes),
+                "default": model.default_mode,
+                "gradient": copy.deepcopy(model.gradient),
+            },
+            "icons": dict(model.icons),
+            "imagery": dict(model.imagery),
+            "composition": dict(model.composition),
+            "logo": dict(model.logo),
+        },
+        "aceite": brand.get("aceite"),
+    }
 
 
 def _role_hex(model: _Model, role: str) -> str:
@@ -1452,11 +1549,14 @@ def _read_brand(brand_path: str | Path) -> dict[str, Any]:
 
 
 def load_brand(brand_path: str | Path) -> dict[str, Any]:
-    """Read and validate brand.json, returning the raw object for other scripts."""
+    """Read, validate and normalize brand.json (optional blocks filled in).
+
+    The returned object is what the theme builder, the page generator and the
+    checker consume: no consumer has to raw-access an optional block.
+    """
 
     data = _read_brand(brand_path)
-    _build_model(data)
-    return data
+    return normalize_brand(data)
 
 
 def resolve_brand_path(

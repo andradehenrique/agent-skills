@@ -36,11 +36,10 @@
       "default": "light",
       "gradient": null
     },
-    "icons": {"family": "fluent", "style": "regular", "size": 16},
+    "icons": {"family": "fluent", "size": 16},
     "imagery": {
       "mode": "photo",
-      "treatment": "luz quente, madeira e massa em close, grão leve",
-      "placeholder": "placehold"
+      "treatment": "luz quente, madeira e massa em close, grão leve"
     },
     "composition": {"direction": "editorial", "measure": "65ch", "grid": "12"},
     "logo": {"variant": "C", "name": "Chama", "notes": "Duas formas geométricas: chama e arco de forno."}

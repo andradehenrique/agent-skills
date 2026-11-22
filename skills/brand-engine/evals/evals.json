@@ -1,6 +1,6 @@
 {
   "skill_name": "brand-engine",
-  "notes": "Run only with approval. The prompts are in English, so every deliverable and gate question must be in English too. Each eval fails if the manual is skipped or a template is generated before an explicit ok, if a missing fact is invented instead of written as [placeholder], if check_page.py reports an ERROR, or if the delivered formats differ only in color and font instead of composition, type, shape and color. The brand-kit is the default proof of the system and is skipped only for a single-artifact request. The v2 contract is final: no v1 fields, no product flavor and no Gupy tokens.",
+  "notes": "Run only with approval. The prompts are in English, so every deliverable and gate question must be in English too: the generator's starter copy is pt-BR, so translate the manual and every format and set language to en (it becomes <html lang>). Each eval fails if the manual is skipped or a template is generated before an explicit ok, if a missing fact is invented instead of written as [placeholder], if check_page.py reports an ERROR, or if the delivered formats differ only in color and font instead of composition, type, shape and color. The brand-kit is the default proof of the system and is skipped only for a single-artifact request. The v2 contract is final: no v1 fields, no product flavor and no Gupy tokens.",
   "evals": [
     {
       "id": 0,

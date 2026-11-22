@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="pt-BR" data-theme-default="{{THEME_DEFAULT}}"{{THEME_LOCK}}>
+<html lang="{{LANGUAGE}}" data-theme-default="{{THEME_DEFAULT}}"{{THEME_LOCK}}>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
@@ -30,14 +30,15 @@
   }
   .be-mark { display: inline-block; flex: none; width: 24px; height: 24px; fill: currentColor; }
   .be-wordmark {
-    font-family: var(--b-display); font-weight: 600; letter-spacing: -0.01em;
+    font-family: var(--b-display); font-weight: var(--b-weight-display);
+    letter-spacing: var(--b-tracking-display); text-transform: var(--b-case-display);
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   }
   .be-monogram {
     display: inline-flex; flex: none; align-items: center; justify-content: center;
     width: 24px; height: 24px; border-radius: var(--b-radius-md);
     background: var(--b-primary); color: var(--b-on-primary);
-    font-family: var(--b-display); font-size: var(--b-text-sm); font-weight: 700;
+    font-family: var(--b-display); font-size: var(--b-text-sm); font-weight: var(--b-weight-display);
   }
 
   [data-theme-toggle] .be-icon-sun { display: none; }

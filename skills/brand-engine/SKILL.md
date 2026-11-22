@@ -7,7 +7,7 @@ metadata:
 
 # Brand Engine
 
-**CRITICAL LANGUAGE RULE:** All copy, labels, questions and deliverables must be in the language the user speaks to you in. Portuguese in, Portuguese out; English in, English out. The default when the user has not written in a language yet is pt-BR. Code, CLI flags and file names stay in English.
+**CRITICAL LANGUAGE RULE:** All copy, labels, questions and deliverables must be in the language the user speaks to you in. Portuguese in, Portuguese out; English in, English out. The default when the user has not written in a language yet is pt-BR. The generator's starter copy is pt-BR: when the user's language differs, translate the manual and every format before delivery and set `language` in `brand.json` (BCP-47, default `pt-BR`); it is emitted as `<html lang>`. Code, CLI flags and file names stay in English.
 
 ## Overview
 
@@ -49,7 +49,7 @@ The skill is flexible by design: the route carries the visual system (color role
 
 - **Recommended first.** Propose 2–3 routes and mark exactly one as recommended, with the "why" in one line. The same applies to formats: propose the 2–3 that fit the context.
 - **Granularity on demand.** The default flow does not ask about radius, spacing, scale, icon family or chart colors. If the user asks ("quero ajustar o radius"), open the control and record the choice in `brand.json`.
-- **Post-delivery adjustments.** `brand.json` is the state. "Ajusta X" regenerates the theme, the manual, the brand-kit and the delivered formats, then revalidates, without restarting discovery.
+- **Post-delivery adjustments.** `brand.json` is the state. "Ajusta X" regenerates the manual and the brand-kit (unless the user skipped it), restyles each delivered page in place so the composed copy survives, then revalidates, without restarting discovery. Full regeneration with `--force` only when the user explicitly asks to replace a page.
 - **The delivery note lists assumptions and placeholders.** The user sees what the skill decided for them and what is still missing.
 
 ## Execution Flow
@@ -77,7 +77,7 @@ Propose 2–3 routes. Mark exactly one as recommended and say why in one line. E
 
 ### Phase 2: Theme and logo
 
-Write `brand.json` from the approved route using the v2 schema in `references/tokens.md`, then build the theme:
+Write `brand.json` from the approved route using the v2 schema in `references/tokens.md` (include `language` when the delivery is not pt-BR), then build the theme:
 
 ```bash
 python3 <skill>/scripts/build_theme.py --brand brand.json --out . [--force]
@@ -105,7 +105,7 @@ Generate the manual:
 python3 <skill>/scripts/new_page.py --brand brand.json --format manual --title "Manual de Marca" --out manual.html
 ```
 
-The manual contains: purpose and positioning; voice with SOMOS / NÃO SOMOS and right/wrong examples; colors with roles, hex/RGB, feedback, charts, pairs and the optional gradient; display and body type with the scale equation and line-heights; logo construction, variants, breathing area and misuses; grid and spacing; icon style; imagery treatment; components; composition; applications; and signature. "NÃO SOMOS" is proposed from the route and attributes and confirmed at the gate. Use `references/formats.md`.
+The manual contains: purpose and positioning; voice with SOMOS / NÃO SOMOS and right/wrong examples; colors with roles, hex/RGB, feedback, charts, pairs and the optional gradient; display and body type with the scale equation and line-heights; logo construction, variants, breathing area and misuses; grid and spacing; icon family and usage; imagery treatment; components; composition; applications; and signature. "NÃO SOMOS" is proposed from the route and attributes and confirmed at the gate. Use `references/formats.md`.
 
 #### Gate 2 — Manual approval (mandatory, prompt-only)
 
@@ -126,6 +126,14 @@ Then propose the 2–3 formats that fit the context and confirm the set — a li
 ```bash
 python3 <skill>/scripts/new_page.py --brand brand.json --format <fmt> --title "..." --out <name>.html [--theme light|dark|system|light-only|dark-only] [--force]
 ```
+
+To adjust a delivered page after approval (palette, type, spacing, radius, shadow, gradient) without losing composed copy, restyle only its generated theme blocks:
+
+```bash
+python3 <skill>/scripts/new_page.py --brand brand.json --restyle --out <page>.html
+```
+
+Use `--force` for a full regeneration only when the user explicitly asks to replace the page.
 
 | Format | Job |
 |---|---|
@@ -180,7 +188,7 @@ All paths are relative to the user's working directory. Nothing is written insid
 
 | File | Contents |
 |---|---|
-| `brand.json` | The approved v2 state: purpose, persona, territory, archetype, attributes, optional voice, `design` (colors by role, feedback, charts, type, shape, theme, icons, imagery, composition, logo) and the `aceite` flag. |
+| `brand.json` | The approved v2 state: purpose, persona, territory, archetype, attributes, optional `language` and voice, `design` (colors by role, feedback, charts, type, shape, theme, icons, imagery, composition, logo) and the `aceite` flag. |
 | `theme.css` | `--b-*` custom properties for colors, surfaces, text, feedback, charts, focus, type, spacing, radius, shadows, optional gradient, light and optional dark. |
 | `tailwind-theme.css` | Maps the `--b-*` variables to Tailwind v4 semantic utilities such as `bg-surface`, `text-fg-muted`, `border-line`. |
 | `logo.svg` | The chosen logo variant: symbol in one color via `currentColor`, a monogram tile as a single solid brand fill, with viewBox and accessible title. |
@@ -202,7 +210,7 @@ Before delivering, confirm:
 - [ ] Type sizes belong to the generated scale; spacing is a multiple of the brand unit (4 or 8).
 - [ ] Icons are decorative or labeled; images use `placehold.co` with a meaningful `alt` and the dark variant when needed.
 - [ ] Copy contains no invented fact; unresolved facts use `[placeholder]` and appear in the delivery note.
-- [ ] Language matches the user; default is pt-BR.
+- [ ] Language matches the user; `language` is set (default pt-BR) and matches `<html lang>`; the starter copy was translated when needed.
 - [ ] 375px has no horizontal scroll; keyboard reaches all controls; the theme switch works; deck overflow and social safe zones were checked.
 - [ ] The delivery note says the page needs internet and whether the browser check was performed.
 

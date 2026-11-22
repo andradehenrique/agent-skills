@@ -35,11 +35,10 @@
       "default": "dark",
       "gradient": {"from": "Ouro Velho", "to": "Ameixa", "angle": 120, "via": "Marfim"}
     },
-    "icons": {"family": "phosphor", "style": "thin", "size": 16},
+    "icons": {"family": "phosphor", "size": 16},
     "imagery": {
       "mode": "photo",
-      "treatment": "fundo escuro, luz lateral, grão fino",
-      "placeholder": "placehold"
+      "treatment": "fundo escuro, luz lateral, grão fino"
     },
     "composition": {"direction": "minimal", "measure": "60ch", "grid": "12"},
     "logo": {"variant": "A", "name": "Verre", "notes": "Wordmark em caixa alta espaçada."}

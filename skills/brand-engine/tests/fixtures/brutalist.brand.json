@@ -37,8 +37,8 @@
     },
     "shape": {"radius": "sharp", "unit": 4, "shadows": "none"},
     "theme": {"modes": ["light"], "default": "light", "gradient": null},
-    "icons": {"family": "lucide", "style": "bold", "size": 20},
-    "imagery": {"mode": "none", "treatment": "sem imagem; textura de concreto via CSS", "placeholder": "placehold"},
+    "icons": {"family": "lucide", "size": 20},
+    "imagery": {"mode": "none", "treatment": "sem imagem; textura de concreto via CSS"},
     "composition": {"direction": "poster", "measure": "55ch", "grid": "6"},
     "logo": {"variant": "B", "name": "Bloco", "notes": "Monograma em bloco sólido."}
   },

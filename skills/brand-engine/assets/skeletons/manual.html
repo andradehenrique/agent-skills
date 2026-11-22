@@ -40,7 +40,7 @@
 
     <section aria-labelledby="tom" class="border-t border-line pt-8">
       <h2 id="tom" class="text-2xl font-semibold tracking-tight md:text-3xl">Tom de voz</h2>
-      <p class="mt-2 max-w-3xl text-fg-muted">A voz nasce dos atributos aprovados. Ajuste as listas com o cliente antes de publicar.</p>
+      <p class="mt-2 max-w-3xl text-fg-muted">{{VOICE_SUMMARY}}</p>
       <div class="mt-6 grid gap-4 md:grid-cols-2">
         <div class="rounded-lg border-l-4 border-primary bg-surface p-4">
           <h3 class="text-lg font-semibold">SOMOS</h3>
@@ -54,6 +54,9 @@
             {{NAO_SOMOS_LIST}}
           </ul>
         </div>
+      </div>
+      <div class="mt-6 grid gap-4 md:grid-cols-3">
+        {{VOICE_RULES}}
       </div>
       <div class="mt-6 grid gap-4 md:grid-cols-2">
         <figure class="rounded-lg border border-line bg-surface p-4">
@@ -143,7 +146,7 @@
 
     <section aria-labelledby="logo" class="border-t border-line pt-8">
       <h2 id="logo" class="text-2xl font-semibold tracking-tight md:text-3xl">Logo</h2>
-      <!-- logo: breathing area / área de respiro = S (var(--b-space-1), 8px) em todos os lados; nada entra nessa margem. -->
+      <!-- logo: breathing area / área de respiro = S (var(--b-space-1)) em todos os lados; nada entra nessa margem. -->
       <p class="mt-2 max-w-3xl text-fg-muted">A área de respiro é igual a S ({{LOGO_BREATHING}}) em todos os lados. Uma cor via <code class="text-link">currentColor</code>, sem sombra, gradiente ou contorno.</p>
 
       <div class="mt-6 grid gap-4 md:grid-cols-3">
@@ -163,7 +166,7 @@
           <p class="mt-3 text-xs text-fg-muted">Quando não há símbolo que sobreviva a 16px.</p>
         </div>
       </div>
-      <p class="mt-4 text-sm text-fg-muted">Variante aprovada: <strong class="font-semibold text-fg">{{LOGO_VARIANT}}</strong>. {{LOGO_NOTES}}</p>
+      <p class="mt-4 text-sm text-fg-muted">Logo <strong class="font-semibold text-fg" data-logo-name="{{LOGO_NAME}}">{{LOGO_NAME}}</strong> · variante aprovada: <strong class="font-semibold text-fg">{{LOGO_VARIANT}}</strong>. {{LOGO_NOTES}}</p>
 
       <h3 class="mt-8 text-xl font-semibold">Tamanhos e área de respiro</h3>
       <div class="mt-3 flex flex-wrap items-end gap-6">
@@ -185,10 +188,10 @@
 
     <section aria-labelledby="grid" class="border-t border-line pt-8">
       <h2 id="grid" class="text-2xl font-semibold tracking-tight md:text-3xl">Grid e espaçamento</h2>
-      <p class="mt-2 max-w-3xl text-fg-muted">A unidade é 8px. Todo espaçamento é múltiplo dela; nada de valores soltos entre 8 e 16 ou entre 16 e 24.</p>
+      <p class="mt-2 max-w-3xl text-fg-muted">A unidade é {{SPACING_UNIT}}. Todo espaçamento é múltiplo dela; nada de valores soltos entre tokens.</p>
       <div class="be-scroll-x mt-4 rounded-lg border border-line bg-surface">
         <table class="be-table min-w-[480px]">
-          <caption>Tokens de espaçamento — todos múltiplos de 8px.</caption>
+          <caption>Tokens de espaçamento — todos múltiplos de {{SPACING_UNIT}}.</caption>
           <thead>
             <tr>
               <th scope="col">Token</th>
@@ -197,14 +200,7 @@
             </tr>
           </thead>
           <tbody>
-            <tr><td>--b-space-1</td><td>8px</td><td>respiro mínimo, ícone e etiqueta</td></tr>
-            <tr><td>--b-space-2</td><td>16px</td><td>entre linhas de um bloco</td></tr>
-            <tr><td>--b-space-3</td><td>24px</td><td>padding de cartão compacto</td></tr>
-            <tr><td>--b-space-4</td><td>32px</td><td>padding de cartão e coluna</td></tr>
-            <tr><td>--b-space-6</td><td>48px</td><td>entre grupos</td></tr>
-            <tr><td>--b-space-8</td><td>64px</td><td>entre seções no celular</td></tr>
-            <tr><td>--b-space-12</td><td>96px</td><td>entre seções no desktop</td></tr>
-            <tr><td>--b-space-16</td><td>128px</td><td>abertura de página</td></tr>
+            {{SPACING_ROWS}}
           </tbody>
         </table>
       </div>
@@ -212,7 +208,7 @@
 
     <section aria-labelledby="icones" class="border-t border-line pt-8">
       <h2 id="icones" class="text-2xl font-semibold tracking-tight md:text-3xl">Ícones</h2>
-      <p class="mt-2 max-w-3xl text-fg-muted">A família e o peso vêm do brand.json; o equivalente semântico fica em <code class="text-link">assets/icons.json</code>. Um ícone usa <code class="text-link">currentColor</code>, herda o tamanho do texto e nunca é o único portador de significado.</p>
+      <p class="mt-2 max-w-3xl text-fg-muted">A família vem do brand.json; o equivalente semântico fica em <code class="text-link">assets/icons.json</code>. Um ícone usa <code class="text-link">currentColor</code>, herda o tamanho do texto e nunca é o único portador de significado.</p>
       <div class="mt-6 grid gap-4 sm:grid-cols-2 md:grid-cols-4">
         {{ICON_SAMPLES}}
       </div>
@@ -226,7 +222,7 @@
 
     <section aria-labelledby="imagem" class="border-t border-line pt-8">
       <h2 id="imagem" class="text-2xl font-semibold tracking-tight md:text-3xl">Imagem</h2>
-      <p class="mt-2 max-w-3xl text-fg-muted">O tratamento deriva do território: {{TERRITORY}}. Pessoa e produto reais; nenhum banco de imagem sem direito de uso. Enquanto o asset real não existe, use <code class="text-link">placehold.co</code> e registre o placeholder na nota de entrega.</p>
+      <p class="mt-2 max-w-3xl text-fg-muted">O tratamento deriva do território: {{TERRITORY}}. Pessoa e produto reais; nenhum banco de imagem sem direito de uso. Quando a marca usa imagem e o asset real ainda não existe, use <code class="text-link">placehold.co</code> e registre o placeholder na nota de entrega.</p>
       <ul class="mt-3 list-disc space-y-1 pl-4 text-sm text-fg-muted">
         <li>Luz natural ou uma fonte direcional; sem filtro que mude a cor da pele.</li>
         <li>Contraste suficiente para texto sobreposto; se não houver, use faixa sólida.</li>

@@ -35,8 +35,8 @@
       "default": "light",
       "gradient": null
     },
-    "icons": {"family": "fluent", "style": "regular", "size": 16},
-    "imagery": {"mode": "abstract", "treatment": "papel, grão leve", "placeholder": "placehold"},
+    "icons": {"family": "fluent", "size": 16},
+    "imagery": {"mode": "abstract", "treatment": "papel, grão leve"},
     "composition": {"direction": "editorial", "measure": "65ch", "grid": "12"},
     "logo": {"variant": "C", "name": "Colchete", "notes": "Dois colchetes e um bloco."}
   },

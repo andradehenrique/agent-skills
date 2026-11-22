@@ -49,6 +49,15 @@ Public API::
 file path or a directory (the file is then ``<fmt>.html``). Existing files are
 never replaced without ``force=True`` (CLI ``--force``).
 
+``restyle(page, brand)`` (CLI ``--restyle``) replaces only the generated
+``theme.css``/``tailwind-theme.css`` blocks of an existing page, preserving the
+composed body. It is the post-delivery adjustment path; full regeneration still
+requires ``--force`` and an explicit user request.
+
+``language`` (BCP-47, default ``pt-BR``) is emitted as the ``<html lang>``
+attribute. The skeleton copy is pt-BR; translate it when the brand language is
+different.
+
 ``theme`` accepts ``light|dark|system|light-only|dark-only``: ``system`` only
 when the brand has both modes, ``*-only`` only when that mode exists. ``None``
 follows ``design.theme.default``. Single-mode brands are locked and render no
@@ -78,6 +87,7 @@ from build_theme import (
     BrandError,
     contrast_ratio,
     load_brand,
+    normalize_brand,
     render_theme,
     resolve_brand_path,
 )
@@ -624,6 +634,70 @@ def _type_rows(theme_css: str) -> str:
     return "\n            ".join(rows)
 
 
+def _spacing_rows(unit: int) -> str:
+    """Spacing table rows generated from the same unit as ``theme.css``."""
+
+    rows = (
+        (1, "respiro mínimo, ícone e etiqueta"),
+        (2, "entre linhas de um bloco"),
+        (3, "padding de cartão compacto"),
+        (4, "padding de cartão e coluna"),
+        (6, "entre grupos"),
+        (8, "entre seções no celular"),
+        (12, "entre seções no desktop"),
+        (16, "abertura de página"),
+    )
+    return "\n            ".join(
+        f'<tr><td>--b-space-{step}</td><td>{step * unit}px</td><td>{_esc(use)}</td></tr>'
+        for step, use in rows
+    )
+
+
+def _voice_summary(brand: dict) -> str:
+    return _esc(brand["voice"]["summary"])
+
+
+def _voice_rules(brand: dict) -> str:
+    voice = brand["voice"]
+    principles = "\n                ".join(
+        f"<li>{_esc(item)}</li>" for item in voice["principles"]
+    ) or "<li>[placeholder — princípios de voz]</li>"
+    avoid = "\n                ".join(
+        f"<li>{_esc(item)}</li>" for item in voice["avoid"]
+    ) or "<li>[placeholder — o que evitar]</li>"
+    emoji = (
+        "Emoji só em social, nunca em interface ou relatório."
+        if voice["emoji"] == "social-only"
+        else "Sem emoji."
+    )
+    return "\n        ".join(
+        (
+            '<div class="rounded-lg border border-line bg-surface p-4">',
+            '  <h3 class="text-lg font-semibold">Princípios</h3>',
+            '  <ul class="mt-3 list-disc space-y-1 pl-4 text-sm text-fg-muted">',
+            f"                {principles}",
+            "  </ul>",
+            "</div>",
+            '<div class="rounded-lg border border-line bg-surface p-4">',
+            '  <h3 class="text-lg font-semibold">Evitar</h3>',
+            '  <ul class="mt-3 list-disc space-y-1 pl-4 text-sm text-fg-muted">',
+            f"                {avoid}",
+            "  </ul>",
+            "</div>",
+            '<div class="rounded-lg border border-line bg-surface p-4">',
+            '  <h3 class="text-lg font-semibold">Pessoa e emoji</h3>',
+            f'  <p class="mt-3 text-sm text-fg-muted">Trate o leitor por “{_esc(voice["person"])}”.</p>',
+            f'  <p class="mt-1 text-sm text-fg-muted">{_esc(emoji)}</p>',
+            "</div>",
+        )
+    )
+
+
+def _logo_name(brand: dict) -> str:
+    name = brand["design"]["logo"].get("name") or "[placeholder — nome do logo]"
+    return _esc(name)
+
+
 def _somos_list(attributes: list[str]) -> str:
     return "\n            ".join(f"<li>{_esc(item)}</li>" for item in attributes)
 
@@ -837,7 +911,12 @@ def _placehold(width: int, height: int, text: str, bg: str, fg: str) -> str:
     )
 
 
-def _image_sample(brand: dict) -> str:
+def _image_sample(
+    brand: dict,
+    width: int = 1200,
+    height: int = 800,
+    label: str = "imagem da marca",
+) -> str:
     design = brand["design"]
     colors = design["colors"]
     canvas = colors["canvas"]["hex"]
@@ -848,13 +927,27 @@ def _image_sample(brand: dict) -> str:
     modes = tuple(theme.get("modes") or DEFAULT_THEME_MODES)
     both = "light" in modes and "dark" in modes
 
-    alt = (
-        f"Imagem de exemplo — {imagery.get('treatment') or imagery.get('mode') or 'marca'}"
-    )
-    light_url = _placehold(1200, 800, "imagem da marca", canvas, primary)
+    if imagery["mode"] == "none":
+        treatment = (
+            f" {_esc(imagery['treatment'])}." if imagery.get("treatment") else ""
+        )
+        return "\n".join(
+            (
+                '<div class="rounded-lg border border-dashed border-line-strong bg-surface p-6">',
+                '  <p class="text-sm font-semibold">Sem imagem de banco</p>',
+                '  <p class="mt-1 text-sm text-fg-muted">'
+                "Esta marca não usa fotografia nem ilustração: a textura vem do CSS "
+                f"e dos próprios componentes.{treatment}</p>",
+                '  <code class="mt-2 block text-xs text-fg-subtle">design.imagery.mode · none</code>',
+                "</div>",
+            )
+        )
+
+    alt = f"Imagem de exemplo — {imagery.get('treatment') or imagery['mode']}"
+    light_url = _placehold(width, height, label, canvas, primary)
 
     if both:
-        dark_url = _placehold(1200, 800, "imagem da marca", ink, canvas)
+        dark_url = _placehold(width, height, label, ink, canvas)
         initial_dark = (theme.get("default") or "light") == "dark"
         src = dark_url if initial_dark else light_url
         attrs = (
@@ -869,7 +962,7 @@ def _image_sample(brand: dict) -> str:
         (
             '<figure class="rounded-lg border border-line bg-surface p-3">',
             f'  <img src="{_esc(src)}"{attrs} alt="{_esc(alt)}" '
-            'class="block h-auto w-full rounded-md" width="1200" height="800" loading="lazy">',
+            f'class="block h-auto w-full rounded-md" width="{width}" height="{height}" loading="lazy">',
             '  <figcaption class="mt-2 text-xs text-fg-subtle">'
             "[placeholder — troque pelo asset real; a nota de entrega lista os placeholders.]"
             "</figcaption>",
@@ -956,11 +1049,12 @@ def _set_initial_theme(page: str, mode: str | None) -> str:
 
 
 def render_page(fmt: str, brand: dict, title: str, theme: str | None = None) -> str:
-    """Render one format from an already loaded v2 brand object."""
+    """Render one format from a v2 brand object (raw or normalized)."""
 
     if fmt not in FORMATS:
         raise ValueError(f"unknown format {fmt!r} (choose from {', '.join(FORMATS)})")
 
+    brand = normalize_brand(brand)
     built = render_theme(brand)
     theme_css = built.theme_css
     tailwind_css = built.tailwind_theme_css
@@ -981,6 +1075,7 @@ def render_page(fmt: str, brand: dict, title: str, theme: str | None = None) -> 
     mapping = {
         "TITLE": safe_title,
         "BRAND_NAME": _esc(name),
+        "LANGUAGE": _esc(brand["language"]),
         "PURPOSE": _esc(brand["purpose"]),
         "PERSONA": _esc(brand["persona"]),
         "TERRITORY": _esc(brand["territory"]),
@@ -990,13 +1085,18 @@ def render_page(fmt: str, brand: dict, title: str, theme: str | None = None) -> 
         "HEADLINE": safe_title,
         "SOMOS_LIST": _somos_list(attributes),
         "NAO_SOMOS_LIST": _nao_somos_list(attributes),
+        "VOICE_SUMMARY": _voice_summary(brand),
+        "VOICE_RULES": _voice_rules(brand),
         "COLOR_CARDS": _color_cards(brand),
         "PAIR_ROWS": _pair_rows(theme_css),
         "TYPE_ROWS": _type_rows(theme_css),
+        "SPACING_UNIT": f"{unit}px",
+        "SPACING_ROWS": _spacing_rows(unit),
         "FEEDBACK_CARDS": _feedback_cards(brand),
         "CHART_SWATCHES": _chart_swatches(),
         "ICON_SAMPLES": _icon_samples(brand),
         "IMAGE_SAMPLE": _image_sample(brand),
+        "SOCIAL_IMAGE": _image_sample(brand, 1080, 1350, "imagem do post"),
         "COMPONENT_SAMPLES": _component_samples(brand),
         "COMPOSITION_RULES": _composition_rules(brand),
         "APPLICATION_CARDS": _application_cards(brand),
@@ -1008,6 +1108,7 @@ def render_page(fmt: str, brand: dict, title: str, theme: str | None = None) -> 
         "SCALE_BASE": _esc(scale.get("base", 16)),
         "SCALE_RATIO": _esc(scale.get("ratio", 1.25)),
         "LOGO_VARIANT": _esc(variant),
+        "LOGO_NAME": _logo_name(brand),
         "LOGO_NOTES": _esc(logo_notes),
         "LOGO_C": _lockup("C", name),
         "LOGO_B": _lockup("B", name),
@@ -1049,6 +1150,68 @@ def render_page(fmt: str, brand: dict, title: str, theme: str | None = None) -> 
     if leftover:
         raise RuntimeError(f"unreplaced placeholders in {fmt}: {sorted(set(leftover))}")
     return page
+
+
+def _replace_generated_style(html: str, needle: str, replacement: str) -> str:
+    """Replace one ``<style>`` block whose content contains ``needle``."""
+
+    pattern = re.compile(r"<style>\s*(.*?)</style>", re.S)
+    found = False
+
+    def repl(match: re.Match[str]) -> str:
+        nonlocal found
+        if needle not in match.group(1):
+            return match.group(0)
+        found = True
+        return replacement
+
+    updated = pattern.sub(repl, html)
+    if not found:
+        raise ValueError("page has no generated brand-engine theme block")
+    return updated
+
+
+def restyle_html(html: str, brand: dict) -> str:
+    """Replace only the generated theme/tailwind-theme blocks, keeping the body.
+
+    This is the post-delivery adjustment path: the composed copy, sections and
+    page shell stay untouched; palette, type, spacing, radius, shadow, modes and
+    gradient tokens come from the current ``brand.json``.
+    """
+
+    brand = normalize_brand(brand)
+    built = render_theme(brand)
+    theme_css = _strip_css_comments(built.theme_css).strip()
+    tailwind_css = _strip_css_comments(built.tailwind_theme_css).strip()
+
+    html = _replace_generated_style(
+        html, "--b-color-", f"<style>\n{theme_css}\n</style>"
+    )
+    tailwind = re.compile(r'<style type="text/tailwindcss">\s*.*?</style>', re.S)
+    updated, count = tailwind.subn(
+        lambda match: f'<style type="text/tailwindcss">\n{tailwind_css}\n</style>',
+        html,
+        count=1,
+    )
+    if count != 1:
+        raise ValueError("page has no generated tailwind-theme block")
+    return updated
+
+
+def restyle(
+    page: str | Path, brand: str | Path, out: str | Path | None = None
+) -> Path:
+    """Rewrite an existing generated page's theme blocks in place."""
+
+    data = load_brand(brand)
+    source = Path(page).expanduser()
+    html = source.read_text(encoding="utf-8")
+    updated = restyle_html(html, data)
+
+    destination = Path(out).expanduser() if out is not None else source
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    destination.write_text(updated, encoding="utf-8")
+    return destination
 
 
 def _destination(out: str | Path, fmt: str) -> Path:
@@ -1095,10 +1258,23 @@ def main(argv: list[str] | None = None) -> int:
         description="Generate a branded single-file HTML starter page from brand.json."
     )
     parser.add_argument("--brand", help="path to brand.json (flag wins over discovery)")
-    parser.add_argument("--format", required=True, choices=FORMATS)
-    parser.add_argument("--title", required=True)
     parser.add_argument(
-        "--out", required=True, help="output .html file (or directory to hold <format>.html)"
+        "--format",
+        choices=FORMATS,
+        help="format to generate (required unless --restyle)",
+    )
+    parser.add_argument(
+        "--title", help="page title (required unless --restyle)"
+    )
+    parser.add_argument(
+        "--out",
+        required=True,
+        help="output .html file (or directory to hold <format>.html); with --restyle, the page to adjust",
+    )
+    parser.add_argument(
+        "--restyle",
+        action="store_true",
+        help="replace only the generated theme blocks of an existing page",
     )
     parser.add_argument("--theme", default=None, choices=THEMES)
     parser.add_argument("--force", action="store_true", help="replace an existing output file")
@@ -1113,6 +1289,17 @@ def main(argv: list[str] | None = None) -> int:
                 file=sys.stderr,
             )
             return 2
+
+        if args.restyle:
+            if args.format or args.title:
+                parser.error("--restyle does not take --format or --title")
+            destination = restyle(args.out, brand_path)
+            print(f"ok: {destination} (theme blocks restyled)")
+            return 0
+
+        if not args.format or not args.title:
+            parser.error("--format and --title are required unless --restyle")
+
         destination = _destination(args.out, args.format)
         new_page(
             args.format,

@@ -16,13 +16,18 @@
     font-family: var(--b-body);
     font-size: var(--b-text-base);
     line-height: var(--b-leading-base);
+    font-weight: var(--b-weight-body);
+    letter-spacing: var(--b-tracking-body);
+    text-transform: var(--b-case-body);
     -webkit-font-smoothing: antialiased;
     text-rendering: optimizeLegibility;
   }
   h1, h2, h3, h4 {
     margin: 0 0 var(--b-space-2);
     font-family: var(--b-display);
-    font-weight: 600;
+    font-weight: var(--b-weight-display);
+    letter-spacing: var(--b-tracking-display);
+    text-transform: var(--b-case-display);
     text-wrap: balance;
   }
   h1 { font-size: var(--b-text-4xl); line-height: var(--b-leading-4xl); }
@@ -39,6 +44,20 @@
     border-radius: var(--b-radius-sm);
   }
   ::selection { background: var(--b-highlight); color: var(--b-on-highlight); }
+}
+
+/* Brand type is authoritative. Unlayered on purpose: starter-page utilities such
+   as font-semibold must not silently override the display/body weight, tracking
+   or case recorded in brand.json. Explicit inline styles can still win. */
+h1, h2, h3, h4 {
+  font-weight: var(--b-weight-display);
+  letter-spacing: var(--b-tracking-display);
+  text-transform: var(--b-case-display);
+}
+body {
+  font-weight: var(--b-weight-body);
+  letter-spacing: var(--b-tracking-body);
+  text-transform: var(--b-case-body);
 }
 
 @media (prefers-reduced-motion: reduce) {

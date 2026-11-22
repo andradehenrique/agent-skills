@@ -145,7 +145,7 @@ angle family, `currentColor`. That is C: symbol + “Omnia Labs” wordmark.
       the injected sprite. `app` is exempt from the sprite/breathing-area check
       and uses an inline topbar lockup.
 - [ ] Breathing area S = `--b-space-1` (4px on unit 4, 8px on unit 8) on all
-      sides.
+      sides, except in `app` (see the sprite exemption above).
 - [ ] Misuses documented: recolor, rotate, stretch, replace, shadow, low
       contrast.
 - [ ] A detailed idea degraded to monogram or wordmark with a written reason.

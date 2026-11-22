@@ -77,8 +77,10 @@ Read `voice.md` before drafting. The rules that apply to every format:
   prices and testimonials stay `[placeholder — what is needed]` until the user
   supplies them. Every unresolved placeholder appears in the delivery note
   (**Nota**).
-- Keep the user's language. pt-BR is the default; code, flags and file names stay
-  English.
+- Keep the user's language. pt-BR is the default; the generated starter copy is
+  pt-BR, so translate the manual and every format when the user's language
+  differs and set `language` in `brand.json` (it becomes `<html lang>`). Code,
+  flags and file names stay English.
 
 ## manual — the approval artifact
 
@@ -87,7 +89,7 @@ purpose and positioning; voice with **SOMOS / NÃO SOMOS** and **Certo / Errado*
 colors with roles, hex/RGB, feedback, charts, pairs and the optional gradient;
 display and body type with the scale equation and line-heights; logo
 construction, variants, breathing area and misuses; grid and spacing; icon
-style; imagery treatment; components; composition rules; applications; signature.
+family and usage; imagery treatment; components; composition rules; applications; signature.
 
 - “NÃO SOMOS” is proposed from the route and attributes; the generator seeds it
   from a fixed attribute→antonym map and leaves unknown attributes as
