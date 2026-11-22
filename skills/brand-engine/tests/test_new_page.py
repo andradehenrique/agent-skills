@@ -209,7 +209,12 @@ def test_imagery_mode_none_renders_texture_note() -> None:
         assert "https://placehold.co" not in html, (
             f"{fmt} must not ship photo placeholders when imagery.mode is none"
         )
-        assert "textura" in html, f"{fmt} must explain the CSS texture instead"
+        assert "Sem imagem de banco" in html, (
+            f"{fmt} must render the generated no-imagery note"
+        )
+        assert "design.imagery.mode · none" in html, (
+            f"{fmt} must render the generated texture mode marker"
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -333,6 +338,44 @@ def test_restyle_updates_theme_blocks_and_preserves_body() -> None:
         assert "#123456" in restyled
         assert "#A6402F" not in restyled
         assert "text-transform: var(--b-case-display)" in restyled
+
+
+def test_restyle_cli_refuses_incompatible_flags() -> None:
+    mod = generator()
+    with tempfile.TemporaryDirectory() as tmp:
+        target = Path(tmp) / "page.html"
+        generate("blank", target)
+        before = target.read_text(encoding="utf-8")
+
+        stderr = io.StringIO()
+        with contextlib.redirect_stderr(stderr):
+            code = mod.main(
+                [
+                    "--brand",
+                    str(FIXTURES / "forno-e-brasa.brand.json"),
+                    "--restyle",
+                    "--theme",
+                    "dark",
+                    "--out",
+                    str(target),
+                ]
+            )
+        message = stderr.getvalue()
+        assert code == 2, message
+        assert "--restyle" in message and "--theme" in message
+        assert target.read_text(encoding="utf-8") == before
+
+        data = json.loads((FIXTURES / "forno-e-brasa.brand.json").read_text(encoding="utf-8"))
+        data["design"]["colors"]["primary"]["hex"] = "#123456"
+        brand_file = Path(tmp) / "brand.json"
+        brand_file.write_text(json.dumps(data), encoding="utf-8")
+
+        with contextlib.redirect_stderr(io.StringIO()):
+            code = mod.main(
+                ["--brand", str(brand_file), "--restyle", "--out", str(target)]
+            )
+        assert code == 0
+        assert "#123456" in target.read_text(encoding="utf-8")
 
 
 # ---------------------------------------------------------------------------

@@ -85,7 +85,7 @@ line. Every route uses the same fields so the user can compare:
 | **Tipografia** | Display + body direction, weights and fallback. |
 | **Forma** | Radius profile (`sharp`/`soft`/`round` or custom), unit `4`/`8`, shadows. |
 | **Composição** | Direction (`editorial`/`structured`/`poster`/`minimal`), measure and grid. |
-| **Ícones** | Family (`fluent`/`lucide`/`phosphor`/`tabler`), style and size. |
+| **Ícones** | Family (`fluent`/`lucide`/`phosphor`/`tabler`) and size. |
 | **Imagem** | Mode (`photo`/`illustration`/`abstract`/`none`) and treatment. |
 | **Por que** | At least two answers from P1–P7 that this route satisfies. |
 | **Formatos** | The 2–3 formats that fit first; `brand-kit` is the proof, not a format choice. |
@@ -107,8 +107,8 @@ P7 landing + report.
 **Tipografia:** Newsreader 600 + Source Sans 3 400; escala 16/1.25, fallback Georgia/system-ui.
 **Forma:** radius `soft` (4/8/12/16/24), unit `8`, shadows `soft`.
 **Composição:** `editorial`, medida `65ch`, grid `12`.
-**Ícones:** Fluent regular, 16px, traço fino.
-**Imagem:** `abstract` com papel e grão leve; `placehold` enquanto não houver foto real.
+**Ícones:** Fluent, 16px.
+**Imagem:** `abstract` com papel e grão leve; placeholder da marca enquanto não houver foto real.
 **Por que:** cumpre P1/P4 (Sábio que explica), P3 (editorial humanista) e P6 (claro, não performático). É a rota de menor risco para uma consultoria.
 **Formatos:** `onepage` + `report`.
 **Risco:** pode ficar sóbria demais no social; corrigir com um pôster de uma ideia e tipo maior, sem mudar o sistema.
@@ -119,8 +119,8 @@ P7 landing + report.
 **Tipografia:** display sans condensada 700 + corpo mono 400; escala 16/1.2.
 **Forma:** radius `sharp` (0/0/2/4/4), unit `4`, shadows `none`.
 **Composição:** `structured`, medida `60ch`, grid `16`.
-**Ícones:** Lucide outline, 16px.
-**Imagem:** `abstract` com grid e ruído; `placehold`.
+**Ícones:** Lucide, 16px.
+**Imagem:** `abstract` com grid e ruído; placeholder da marca.
 **Por que:** atende P1 (operação e decisão), P4 (mago/analista) e o topo de P6; funciona quando o conteúdo é número e tabela.
 **Formatos:** `report` + `app`.
 **Risco:** cansa em leitura longa e pode soar fria para P2; corrigir com medida menor e mais espaço.
@@ -131,8 +131,8 @@ P7 landing + report.
 **Tipografia:** display serifada 500 + corpo humanista 400; escala 16/1.3.
 **Forma:** radius `round` (8/12/16/24/9999), unit `8`, shadows `soft`.
 **Composição:** `minimal`, medida `70ch`, grid `12`.
-**Ícones:** Phosphor regular, 20px.
-**Imagem:** `illustration` com traço manual; `placehold`.
+**Ícones:** Phosphor, 20px.
+**Imagem:** `illustration` com traço manual; placeholder da marca.
 **Por que:** traduz P2 (dono de PME que anota), P3 (humanista) e P5 (caderno); envelhece bem em manual e relatório.
 **Formatos:** `onepage` + `social`.
 **Risco:** pode parecer informal demais para um contrato B2B; corrigir com tipografia mais contida e menos cor.

@@ -1291,8 +1291,24 @@ def main(argv: list[str] | None = None) -> int:
             return 2
 
         if args.restyle:
-            if args.format or args.title:
-                parser.error("--restyle does not take --format or --title")
+            conflicts = [
+                flag
+                for flag, value in (
+                    ("--format", args.format),
+                    ("--title", args.title),
+                    ("--theme", args.theme),
+                    ("--force", args.force),
+                )
+                if value
+            ]
+            if conflicts:
+                print(
+                    "new_page: --restyle only rewrites the generated theme blocks; "
+                    f"drop {', '.join(conflicts)}. Use a normal --format run "
+                    "(with --force) for a full page or a theme-mode change.",
+                    file=sys.stderr,
+                )
+                return 2
             destination = restyle(args.out, brand_path)
             print(f"ok: {destination} (theme blocks restyled)")
             return 0

@@ -1111,14 +1111,38 @@ STYLE_DECLARATION_RE = re.compile(
 )
 
 
+def _blank_at_rule_blocks(css: str, name: str) -> str:
+    """Blank ``name { ... }`` at-rule blocks while preserving offsets."""
+
+    pattern = re.compile(rf"(?<![\w-])@?{re.escape(name)}\b[^{{]*\{{", re.I)
+    pieces: list[str] = []
+    cursor = 0
+    for match in pattern.finditer(css):
+        if match.start() < cursor:
+            continue
+        depth = 1
+        index = match.end()
+        while index < len(css) and depth:
+            if css[index] == "{":
+                depth += 1
+            elif css[index] == "}":
+                depth -= 1
+            index += 1
+        pieces.append(css[cursor : match.start()])
+        pieces.append(re.sub(r"[^\n]", " ", css[match.start() : index]))
+        cursor = index
+    pieces.append(css[cursor:])
+    return "".join(pieces)
+
+
 def _check_style_tokens(html: str) -> list[str]:
     """Apply the tokens-only rule to non-generated ``<style>`` blocks.
 
-    The generated ``theme.css`` and ``@theme`` blocks legitimately contain raw
-    hex and rgba values (they define the tokens), so they are skipped. Brand
-    custom properties (``--b-*``) are token definitions; other declarations and
-    utility tokens are checked for bare hex, ``rgb()/hsl()``, named colours and
-    palette/raw utilities.
+    The generated ``@theme`` block is blanked because it defines Tailwind
+    tokens with raw values. The generated ``theme.css`` block is scanned
+    normally: its ``--b-*`` declarations are token definitions and are skipped,
+    while any non-theme declaration in the same block is still checked. Palette
+    and raw-colour utilities are checked inside ``@apply`` and class selectors.
     """
 
     findings: list[str] = []
@@ -1131,9 +1155,7 @@ def _check_style_tokens(html: str) -> list[str]:
             findings.append(finding)
 
     for block in STYLE_BLOCK_RE.finditer(html):
-        css = _blank_comments(block.group(1))
-        if "--b-color-" in css or "@theme" in css:
-            continue
+        css = _blank_at_rule_blocks(_blank_comments(block.group(1)), "@theme")
         for match in STYLE_DECLARATION_RE.finditer(css):
             prop = match.group("prop").lower()
             value = match.group("value").strip()
@@ -1141,12 +1163,15 @@ def _check_style_tokens(html: str) -> list[str]:
             if prop.startswith("--b-"):
                 continue
             if prop.startswith("--"):
-                if _has_raw_colour(value):
+                if _has_embedded_colour(value):
                     add(f"raw colour in custom property {prop}: {value}", line)
                 continue
-            if prop not in COLOR_PROPERTIES:
-                continue
-            if _has_raw_colour(value):
+            raw = (
+                _has_raw_colour(value)
+                if prop in COLOR_PROPERTIES
+                else _has_embedded_colour(value)
+            )
+            if raw:
                 add(f"raw colour in <style> {prop}: {value}", line)
 
         for apply in re.finditer(r"@apply\s+([^;{}]+)", css):
@@ -1176,6 +1201,22 @@ def _check_style_tokens(html: str) -> list[str]:
                     _line_of(html, block.start(1) + selector.start()),
                 )
     return findings
+
+
+def _has_embedded_colour(value: str) -> bool:
+    """Find a raw colour in any declaration value (not just colour properties)."""
+
+    lowered = value.strip().lower()
+    if not lowered:
+        return False
+    if HEX_RE.search(value):
+        return True
+    if re.search(r"\b(?:rgba?|hsla?|oklch|oklab|lab|lch|color)\s*\(", lowered):
+        return True
+    if re.search(r"(?:gradient|color-mix|drop-shadow)\s*\(", lowered):
+        words = re.findall(r"[a-z]+", lowered)
+        return any(word in NAMED_COLOURS for word in words)
+    return False
 
 
 def _has_raw_colour(value: str) -> bool:

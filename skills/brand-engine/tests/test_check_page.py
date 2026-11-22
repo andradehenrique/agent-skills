@@ -242,6 +242,27 @@ def test_generated_theme_style_blocks_are_ignored() -> None:
     assert not has(html, "tokens"), findings(html)
 
 
+def test_brand_token_block_does_not_hide_raw_color() -> None:
+    html = build(
+        "",
+        head_extra="<style>:root{--b-color-x:#010101}.evil{color:#ff0000}</style>",
+    )
+    assert_rule(html, "tokens")
+
+
+def test_style_scan_catches_colors_outside_color_properties() -> None:
+    for declaration in (
+        "background-image:linear-gradient(#ff0000,#00ff00)",
+        "border-image:url(#ff0000)",
+        "filter:drop-shadow(0 0 2px red)",
+    ):
+        html = build("", head_extra=f"<style>.x{{{declaration}}}</style>")
+        assert_rule(html, "tokens", severity="ERROR")
+
+    plain = build("", head_extra="<style>.x{position:absolute;display:flex}</style>")
+    assert not has(plain, "tokens"), findings(plain)
+
+
 def test_accepts_feedback_and_chart_tokens() -> None:
     content = (
         '<p class="mt-2 bg-success-soft p-2 text-success">Salvo</p>'
