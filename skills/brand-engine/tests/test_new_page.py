@@ -162,6 +162,37 @@ def test_format_scripts_are_conditional() -> None:
     )
 
 
+def test_brand_charts_asset_has_no_file_closing_script_tag() -> None:
+    source = (ROOT / "assets" / "brand-charts.js").read_text(encoding="utf-8")
+    assert "</script" not in source.lower(), (
+        "brand-charts.js is inlined verbatim; a literal closing script tag would truncate it"
+    )
+
+
+def test_inline_script_escapes_closing_tag() -> None:
+    mod = generator()
+    assert mod._inline_script("</script>") == r"<\/script>"
+    assert mod._inline_script("</SCRIPT>") == r"<\/script>"
+    assert mod._inline_script("<script>ok</script>") == r"<script>ok<\/script>"
+
+
+def test_chart_pages_inline_the_complete_helper() -> None:
+    mod = generator()
+    helper = mod._inline_script(
+        (ROOT / "assets" / "brand-charts.js").read_text(encoding="utf-8").strip()
+    )
+    init_ids = {"brand-kit": "kit-chart", "report": "report-chart", "app": "app-chart"}
+    for fmt, canvas_id in init_ids.items():
+        html = render(fmt)
+        assert "window.BrandCharts = {" in html, fmt
+        assert helper in html, f"{fmt} split or dropped the BrandCharts helper"
+        assert '*   <script src="brand-charts.js"></script>' not in html, fmt
+        init = f'BrandCharts.create("{canvas_id}"'
+        assert html.index(init) > html.index(helper), (
+            f"{fmt} init script must come after the complete helper"
+        )
+
+
 # ---------------------------------------------------------------------------
 # placehold.co
 # ---------------------------------------------------------------------------

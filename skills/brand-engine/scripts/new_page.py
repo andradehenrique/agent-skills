@@ -346,6 +346,16 @@ def _esc(value: object) -> str:
     return html.escape(str(value), quote=True)
 
 
+def _inline_script(text: str) -> str:
+    """Make ``text`` safe to inline inside a ``<script>`` element.
+
+    Only a closing tag can terminate the element early; the escaped form is a
+    valid JavaScript string/comment sequence and keeps the helper intact.
+    """
+
+    return re.sub(r"</script", r"<\\/script", text, flags=re.I)
+
+
 def _strip_css_comments(css: str) -> str:
     return re.sub(r"/\*.*?\*/", "", css, flags=re.S)
 
@@ -362,7 +372,7 @@ def _iconify_script() -> str:
 
 
 def _chart_script() -> str:
-    helper = _read("brand-charts.js").strip()
+    helper = _inline_script(_read("brand-charts.js").strip())
     return (
         f'<script src="https://cdn.jsdelivr.net/npm/chart.js@{CHARTJS_VERSION}'
         '/dist/chart.umd.min.js"></script>\n'
@@ -1120,7 +1130,7 @@ def render_page(fmt: str, brand: dict, title: str, theme: str | None = None) -> 
         "THEME_TOGGLE": toggle,
         "THEME_DEFAULT": theme_default,
         "THEME_LOCK": theme_lock,
-        "THEME_JS": THEME_JS,
+        "THEME_JS": _inline_script(THEME_JS),
         "THEME_CSS": _strip_css_comments(theme_css).strip(),
         "TAILWIND_THEME": _strip_css_comments(tailwind_css).strip(),
         "TAILWIND_VERSION": TAILWIND_VERSION,
@@ -1143,7 +1153,7 @@ def render_page(fmt: str, brand: dict, title: str, theme: str | None = None) -> 
         page = page.replace("{{" + key + "}}", value)
     page = page.replace("{{BODY}}", body.strip())
     if fmt == "deck":
-        page = page.replace("</body>", "<script>\n" + DECK_JS + "\n</script>\n</body>")
+        page = page.replace("</body>", "<script>\n" + _inline_script(DECK_JS) + "\n</script>\n</body>")
     page = _set_initial_theme(page, initial)
 
     leftover = re.findall(r"\{\{[A-Z0-9_]+\}\}", page)

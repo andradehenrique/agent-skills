@@ -12,15 +12,15 @@
  *   --b-line                     grid lines and borders
  *   --b-surface                  canvas background, point borders
  *
- * Usage:
+ * Usage: add a canvas element, include this helper with a script tag, then
+ * create charts:
  *   <canvas id="receita" height="240"></canvas>
- *   <script src="brand-charts.js"></script>
- *   <script>
+ *   [script]
  *     BrandCharts.create("receita", {
  *       type: "line",
  *       data: { labels: ["Jan", "Fev"], datasets: [{ label: "Receita", data: [10, 12] }] }
  *     });
- *   </script>
+ *   [/script]
  *
  * Theme changes are observed on `document.documentElement[data-theme]`; every
  * registered chart is rebuilt with the new palette. The caller's config is
