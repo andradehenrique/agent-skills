@@ -20,36 +20,16 @@ A skill is a markdown file with `name` and `description` YAML frontmatter that d
 | [github-engineering-report](./skills/github-engineering-report/SKILL.md) | Generates daily/weekly engineering panoramas from GitHub data with PR analysis, human vs. bot review detection, and optional Jira cross-reference. |
 | [message-rewriter](./skills/message-rewriter/SKILL.md) | Turns a rough draft into a ready-to-paste Slack message or code review comment, picking the tone from the detected intent: Direct (BLUF, Conventional Comments), Collaborative (condensed NVC) or Full NVC for real conflict. |
 | [brand-engine](./skills/brand-engine/SKILL.md) | Turns a vague brand idea, a loose color, a missing logo, or reference screenshots into a flexible identity: 2–3 routes with one recommended, a mandatory HTML brand manual approval gate, then a brand-kit and 2–3 formats (landing, deck, report, social, app, blank) built with Tailwind v4, Iconify, Chart.js and placehold.co placeholders, all on semantic tokens with light/dark. The skeleton is a starting point, not a mold. Not for .pptx, PDF, Word or e-mail export, social image export, production React/Vue components, or a complete e-commerce build. |
+| [disk-cleanup](./skills/disk-cleanup/SKILL.md) | Scans the machine (Docker, Xcode and simulators, dev caches, node_modules, forgotten worktrees, ~/Library, Claude Code/Cursor/opencode sessions), prints a numbered list with size and risk per item, and removes only what you confirm — item by item, through a script that re-checks every path before touching it. macOS first, with the structure ready for Linux and Windows. |
 
-## Per-Skill Details
+## Skill Folder Structure
 
-To keep this repository scalable as more skills are added, the root README stays concise.
-
-For each skill, use the skill folder as the source of truth:
+To keep this repository scalable as more skills are added, the root README stays concise. For each skill, the skill folder is the source of truth:
 - `SKILL.md`: trigger conditions, flow, and boundaries
+- `references/`: long-form material the skill loads on demand
 - `docs/`: design documents and specifications
 - `scripts/`: supporting Python/JavaScript utilities
 - `evals/`: test cases and evaluation prompts
-
-For `github-engineering-report`, see:
-- [skills/github-engineering-report/SKILL.md](./skills/github-engineering-report/SKILL.md)
-- [skills/github-engineering-report/docs/2026-06-11-design.md](./skills/github-engineering-report/docs/2026-06-11-design.md)
-
-### message-rewriter
-
-Paste your draft in your own words, with the channel if you know it, and get back one header line (intent, tone, channel) and the message in a code block, in the draft's language.
-
-```
-/message-rewriter comment on the PR: this query hits the DB 3 times, it's slow, should be a join
-```
-
-- **Tones:** Direct for most technical messages. Collaborative for disagreeing, saying no, following up or pointing out a mistake. Full NVC only for real conflict or behavior feedback.
-- **Humanizer:** messages of 4 or more sentences go through the [`humanizer`](https://github.com/blader/humanizer) skill before final formatting, if it is installed. Short messages, or any message when the humanizer is missing, use a built-in checklist, and the skill never blocks. You can force either path ("use the humanizer" / "skip the humanizer").
-- **Iterative:** ask for "shorter", "softer" or "more direct" and it adjusts the last version.
-- **Never sends anything.** It only writes text.
-- **When not to use:** long documents (PR descriptions, tickets, RFCs), plain translation, or legal/HR communication.
-
-References: [techniques and intent map](./skills/message-rewriter/references/techniques.md), [examples (pt-BR)](./skills/message-rewriter/references/examples.md).
 
 ## Installation
 

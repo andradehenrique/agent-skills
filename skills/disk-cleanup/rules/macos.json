@@ -1,0 +1,450 @@
+{
+  "_doc": "macOS-specific rules. Rules with generic=true are broad sweeps and give way to specific rules covering the same path.",
+  "rules": [
+    {
+      "id": "xcode-derived-data",
+      "tool": "Xcode",
+      "category": "build",
+      "kind": "paths",
+      "paths": [
+        "~/Library/Developer/Xcode/DerivedData"
+      ],
+      "title": "DerivedData (builds and indexes)",
+      "risk": "green",
+      "method": "delete",
+      "regenerates": true,
+      "requires_closed": [
+        "Xcode"
+      ],
+      "resolve": [
+        {
+          "defaults": [
+            "com.apple.dt.Xcode",
+            "IDECustomDerivedDataLocation"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "xcode-archives",
+      "tool": "Xcode",
+      "category": "build",
+      "kind": "children",
+      "paths": [
+        "~/Library/Developer/Xcode/Archives"
+      ],
+      "dirs_only": true,
+      "min_age_days": 90,
+      "aggregate": true,
+      "title": "{count} Archives folders older than 90 days",
+      "risk": "yellow",
+      "method": "trash",
+      "note": "Archives hold the dSYMs used to read crashes from released versions. They go to the Trash."
+    },
+    {
+      "id": "xcode-device-support",
+      "tool": "Xcode",
+      "category": "versions",
+      "kind": "versions",
+      "paths": [
+        "~/Library/Developer/Xcode/iOS DeviceSupport",
+        "~/Library/Developer/Xcode/watchOS DeviceSupport"
+      ],
+      "keep_latest": 2,
+      "title": "Device symbols {name}",
+      "risk": "green",
+      "method": "delete",
+      "regenerates": true,
+      "requires_closed": [
+        "Xcode"
+      ],
+      "note": "Recreated the next time a device with that version is connected."
+    },
+    {
+      "id": "simulators-unavailable",
+      "tool": "Xcode",
+      "category": "versions",
+      "kind": "command",
+      "handler": "simctl_unavailable",
+      "risk": "green",
+      "method": "command",
+      "requires_closed": [
+        "Simulator",
+        "Xcode"
+      ]
+    },
+    {
+      "id": "core-simulator-caches",
+      "tool": "Xcode",
+      "category": "cache",
+      "kind": "paths",
+      "paths": [
+        "~/Library/Developer/CoreSimulator/Caches"
+      ],
+      "title": "CoreSimulator caches",
+      "risk": "green",
+      "method": "delete",
+      "regenerates": true,
+      "requires_closed": [
+        "Simulator",
+        "Xcode"
+      ]
+    },
+    {
+      "id": "homebrew",
+      "tool": "Homebrew",
+      "category": "versions",
+      "kind": "command",
+      "handler": "brew",
+      "risk": "green",
+      "method": "command"
+    },
+    {
+      "id": "cocoapods-cache",
+      "tool": "CocoaPods",
+      "category": "cache",
+      "kind": "paths",
+      "paths": [
+        "~/Library/Caches/CocoaPods"
+      ],
+      "title": "CocoaPods cache",
+      "risk": "green",
+      "method": "delete",
+      "regenerates": true
+    },
+    {
+      "id": "claude-app-vm",
+      "tool": "Claude (app)",
+      "category": "cache",
+      "kind": "paths",
+      "paths": [
+        "~/Library/Application Support/Claude/vm_bundles"
+      ],
+      "title": "Agent mode VM image",
+      "risk": "yellow",
+      "method": "delete",
+      "regenerates": true,
+      "requires_closed": [
+        "Claude"
+      ],
+      "note": "The app downloads it again when you use agent mode/Cowork (large download)."
+    },
+    {
+      "id": "claude-app-code-versions",
+      "tool": "Claude (app)",
+      "category": "versions",
+      "kind": "versions",
+      "paths": [
+        "~/Library/Application Support/Claude/claude-code",
+        "~/Library/Application Support/Claude/claude-code-vm"
+      ],
+      "keep_latest": 1,
+      "title": "Claude Code {name} bundled in the app (kept {keep})",
+      "risk": "green",
+      "method": "delete",
+      "requires_closed": [
+        "Claude"
+      ]
+    },
+    {
+      "id": "claude-app-electron-cache",
+      "tool": "Claude (app)",
+      "category": "cache",
+      "kind": "paths",
+      "paths": [
+        "~/Library/Application Support/Claude/Cache",
+        "~/Library/Application Support/Claude/Code Cache",
+        "~/Library/Application Support/Claude/GPUCache",
+        "~/Library/Application Support/Claude/GraphiteDawnCache",
+        "~/Library/Application Support/Claude/DawnGraphiteCache",
+        "~/Library/Application Support/Claude/DawnWebGPUCache",
+        "~/Library/Caches/com.anthropic.claudefordesktop",
+        "~/Library/Caches/com.anthropic.claudefordesktop.ShipIt"
+      ],
+      "title": "{name}",
+      "risk": "green",
+      "method": "delete",
+      "regenerates": true,
+      "requires_closed": [
+        "Claude"
+      ],
+      "note": "Electron cache. If you run this skill inside the Claude app, use the CLI in a terminal with the app closed."
+    },
+    {
+      "id": "claude-app-logs",
+      "tool": "Claude (app)",
+      "category": "logs",
+      "kind": "children",
+      "paths": [
+        "~/Library/Logs/Claude"
+      ],
+      "min_age_days": 14,
+      "aggregate": true,
+      "title": "{count} logs older than 14 days",
+      "risk": "green",
+      "method": "delete"
+    },
+    {
+      "id": "claude-app-state",
+      "tool": "Claude (app)",
+      "category": "state",
+      "kind": "paths",
+      "paths": [
+        "~/Library/Application Support/Claude/claude-code-sessions",
+        "~/Library/Application Support/Claude/local-agent-mode-sessions",
+        "~/Library/Application Support/Claude/IndexedDB",
+        "~/Library/Application Support/Claude/Local Storage"
+      ],
+      "title": "{name}",
+      "risk": "red",
+      "method": "manual",
+      "note": "Sessions and app state. Informational only."
+    },
+    {
+      "id": "cursor-electron-cache",
+      "tool": "Cursor",
+      "category": "cache",
+      "kind": "paths",
+      "paths": [
+        "~/Library/Application Support/Cursor/Cache",
+        "~/Library/Application Support/Cursor/Code Cache",
+        "~/Library/Application Support/Cursor/GPUCache",
+        "~/Library/Application Support/Cursor/CachedExtensionVSIXs",
+        "~/Library/Application Support/Cursor/CachedProfilesData",
+        "~/Library/Caches/cursor-compile-cache",
+        "~/Library/Caches/com.todesktop.230313mzl4w4u92",
+        "~/Library/Caches/com.todesktop.230313mzl4w4u92.ShipIt"
+      ],
+      "title": "{name}",
+      "risk": "green",
+      "method": "delete",
+      "regenerates": true,
+      "requires_closed": [
+        "Cursor"
+      ]
+    },
+    {
+      "id": "cursor-cached-data",
+      "tool": "Cursor",
+      "category": "versions",
+      "kind": "versions",
+      "paths": [
+        "~/Library/Application Support/Cursor/CachedData"
+      ],
+      "keep_latest": 1,
+      "version_sort": "mtime",
+      "title": "Data from an old editor version ({name})",
+      "risk": "green",
+      "method": "delete",
+      "regenerates": true,
+      "requires_closed": [
+        "Cursor"
+      ]
+    },
+    {
+      "id": "cursor-logs",
+      "tool": "Cursor",
+      "category": "logs",
+      "kind": "children",
+      "paths": [
+        "~/Library/Application Support/Cursor/logs"
+      ],
+      "min_age_days": 14,
+      "aggregate": true,
+      "title": "{count} log folders older than 14 days",
+      "risk": "green",
+      "method": "delete"
+    },
+    {
+      "id": "cursor-extension-dups",
+      "tool": "Cursor",
+      "category": "versions",
+      "kind": "extension_dups",
+      "paths": [
+        "~/.cursor/extensions"
+      ],
+      "title": "Extension {name} (kept {keep})",
+      "risk": "green",
+      "method": "delete",
+      "requires_closed": [
+        "Cursor"
+      ]
+    },
+    {
+      "id": "cursor-projects",
+      "tool": "Cursor",
+      "category": "sessions",
+      "kind": "children",
+      "paths": [
+        "~/.cursor/projects"
+      ],
+      "dirs_only": true,
+      "min_age_days": 30,
+      "title": "Agent context for project {name}",
+      "risk": "yellow",
+      "method": "delete",
+      "requires_closed": [
+        "Cursor"
+      ],
+      "note": "Per-project agent data (transcripts, indexes). Projects unused for more than 30 days."
+    },
+    {
+      "id": "cursor-workspace-storage",
+      "tool": "Cursor",
+      "category": "sessions",
+      "kind": "children",
+      "paths": [
+        "~/Library/Application Support/Cursor/User/workspaceStorage"
+      ],
+      "dirs_only": true,
+      "min_age_days": 60,
+      "aggregate": true,
+      "title": "{count} workspaces unused for more than 60 days",
+      "risk": "yellow",
+      "method": "delete",
+      "requires_closed": [
+        "Cursor"
+      ],
+      "note": "State per opened folder (tabs, chat history of that workspace)."
+    },
+    {
+      "id": "cursor-state",
+      "tool": "Cursor",
+      "category": "state",
+      "kind": "paths",
+      "paths": [
+        "~/Library/Application Support/Cursor/User/globalStorage/state.vscdb",
+        "~/Library/Application Support/Cursor/User/globalStorage/anysphere.cursor-agent-worker"
+      ],
+      "title": "{name}",
+      "risk": "red",
+      "method": "manual",
+      "note": "Global state database (includes chat history) and agent worker data. Informational only."
+    },
+    {
+      "id": "vscode-electron-cache",
+      "tool": "VS Code",
+      "category": "cache",
+      "kind": "paths",
+      "paths": [
+        "~/Library/Application Support/Code/Cache",
+        "~/Library/Application Support/Code/Code Cache",
+        "~/Library/Application Support/Code/GPUCache",
+        "~/Library/Application Support/Code/CachedExtensionVSIXs",
+        "~/Library/Application Support/Code/CachedData"
+      ],
+      "title": "{name}",
+      "risk": "green",
+      "method": "delete",
+      "regenerates": true,
+      "requires_closed": [
+        "Code",
+        "Electron"
+      ]
+    },
+    {
+      "id": "vscode-extension-dups",
+      "tool": "VS Code",
+      "category": "versions",
+      "kind": "extension_dups",
+      "paths": [
+        "~/.vscode/extensions"
+      ],
+      "title": "Extension {name} (kept {keep})",
+      "risk": "green",
+      "method": "delete",
+      "requires_closed": [
+        "Code",
+        "Electron"
+      ]
+    },
+    {
+      "id": "user-logs",
+      "tool": "macOS",
+      "category": "logs",
+      "kind": "children",
+      "paths": [
+        "~/Library/Logs"
+      ],
+      "exclude": [
+        "Claude",
+        "DiagnosticReports"
+      ],
+      "min_age_days": 30,
+      "title": "Logs: {name}",
+      "risk": "green",
+      "method": "delete",
+      "generic": true
+    },
+    {
+      "id": "user-caches",
+      "tool": "macOS",
+      "category": "cache",
+      "kind": "children",
+      "paths": [
+        "~/Library/Caches"
+      ],
+      "exclude": [
+        "com.apple.*",
+        "CloudKit",
+        "FamilyCircle",
+        "GeoServices",
+        "com.crashlytics*",
+        "Homebrew"
+      ],
+      "title": "Cache: {name}",
+      "risk": "green",
+      "method": "delete",
+      "regenerates": true,
+      "generic": true,
+      "note": "App caches in general. Close the matching app first; some recreate the cache right away."
+    },
+    {
+      "id": "downloads-installers",
+      "tool": "macOS",
+      "category": "downloads",
+      "kind": "children",
+      "paths": [
+        "~/Downloads"
+      ],
+      "match": [
+        "*.dmg",
+        "*.pkg",
+        "*.iso",
+        "*.xip",
+        "*.zip",
+        "*.tar.gz",
+        "*.tgz"
+      ],
+      "min_age_days": 30,
+      "title": "{name}",
+      "risk": "yellow",
+      "method": "trash",
+      "note": "Old installers and archives. They go to the Trash, they are not deleted."
+    },
+    {
+      "id": "trash",
+      "tool": "macOS",
+      "category": "system",
+      "kind": "paths",
+      "paths": [
+        "~/.Trash"
+      ],
+      "title": "Trash",
+      "risk": "red",
+      "method": "manual",
+      "always_show": true,
+      "note": "Empty it in Finder. The skill does not empty the Trash because that is where it sends what you may want back."
+    },
+    {
+      "id": "time-machine-local-snapshots",
+      "tool": "macOS",
+      "category": "system",
+      "kind": "command",
+      "handler": "tm_snapshots",
+      "risk": "red",
+      "method": "manual",
+      "note": "They hold the space of files already deleted. macOS frees them on its own when space runs out; to force it: sudo tmutil thinlocalsnapshots / 999999999999 4."
+    }
+  ]
+}

@@ -9,9 +9,9 @@ __pycache__/
 test_*.py
 *_test.py
 
-# brand-engine tests are part of the deliverable (see skills/brand-engine/)
-!skills/brand-engine/tests/
-!skills/brand-engine/tests/**
+# Per-skill contract tests are part of the deliverable (skills/<name>/tests/)
+!skills/*/tests/
+!skills/*/tests/**
 
 # IDE
 .vscode/

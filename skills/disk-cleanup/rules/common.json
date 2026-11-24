@@ -1,0 +1,459 @@
+{
+  "_doc": "Rules that apply to more than one OS. Path fields accept a list or {\"macos\": [...], \"linux\": [...], \"windows\": [...]}. Full format in references/rule-schema.md.",
+  "rules": [
+    {
+      "id": "git-worktrees",
+      "tool": "git",
+      "category": "worktree",
+      "kind": "git_worktrees",
+      "risk": "yellow",
+      "note": "Includes the worktrees created by Claude Code under <repo>/.claude/worktrees."
+    },
+    {
+      "id": "stale-build-dirs",
+      "tool": "Projects",
+      "category": "build",
+      "kind": "stale_build_dirs",
+      "max_depth": 3,
+      "names": {
+        "node_modules": "green",
+        ".next": "green",
+        ".nuxt": "green",
+        ".turbo": "green",
+        ".parcel-cache": "green",
+        ".angular": "green",
+        "coverage": "green",
+        ".pytest_cache": "green",
+        "__pycache__": "green",
+        ".gradle": "green",
+        "target": "green",
+        ".venv": "yellow",
+        "venv": "yellow",
+        "dist": "yellow",
+        "build": "yellow"
+      },
+      "method": "delete",
+      "regenerates": true,
+      "note": "Only folders ignored by git, in repositories with no local activity for longer than stale_project_days."
+    },
+    {
+      "id": "docker",
+      "tool": "Docker",
+      "category": "container",
+      "kind": "command",
+      "handler": "docker",
+      "risk": "yellow"
+    },
+    {
+      "id": "npm-cache",
+      "tool": "npm",
+      "category": "cache",
+      "kind": "paths",
+      "paths": {
+        "macos": [
+          "~/.npm/_cacache"
+        ],
+        "linux": [
+          "~/.npm/_cacache"
+        ],
+        "windows": [
+          "$LOCALAPPDATA/npm-cache/_cacache"
+        ]
+      },
+      "title": "npm package cache",
+      "risk": "green",
+      "method": "command",
+      "command": [
+        "npm",
+        "cache",
+        "clean",
+        "--force"
+      ],
+      "fallback": "delete",
+      "regenerates": true,
+      "resolve": [
+        {
+          "cmd": [
+            "npm",
+            "config",
+            "get",
+            "cache"
+          ],
+          "suffix": "_cacache"
+        }
+      ]
+    },
+    {
+      "id": "pnpm-store",
+      "tool": "pnpm",
+      "category": "cache",
+      "kind": "paths",
+      "paths": {
+        "macos": [
+          "~/Library/pnpm/store"
+        ],
+        "linux": [
+          "{xdg_data}/pnpm/store"
+        ],
+        "windows": [
+          "$LOCALAPPDATA/pnpm/store"
+        ]
+      },
+      "title": "pnpm store (only packages no project uses)",
+      "risk": "green",
+      "method": "command",
+      "command": [
+        "pnpm",
+        "store",
+        "prune"
+      ],
+      "regenerates": true,
+      "note": "The size is the whole store; prune removes only what no project references, so the actual gain is usually smaller.",
+      "resolve": [
+        {
+          "cmd": [
+            "pnpm",
+            "store",
+            "path"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "yarn-cache",
+      "tool": "Yarn",
+      "category": "cache",
+      "kind": "paths",
+      "paths": {
+        "macos": [
+          "~/Library/Caches/Yarn",
+          "~/.yarn/berry/cache"
+        ],
+        "linux": [
+          "{xdg_cache}/yarn",
+          "~/.yarn/berry/cache"
+        ]
+      },
+      "title": "Yarn cache ({name})",
+      "risk": "green",
+      "method": "delete",
+      "regenerates": true,
+      "resolve": [
+        {
+          "cmd": [
+            "yarn",
+            "cache",
+            "dir"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "pip-cache",
+      "tool": "pip",
+      "category": "cache",
+      "kind": "paths",
+      "paths": {
+        "macos": [
+          "~/Library/Caches/pip"
+        ],
+        "linux": [
+          "{xdg_cache}/pip"
+        ],
+        "windows": [
+          "$LOCALAPPDATA/pip/Cache"
+        ]
+      },
+      "title": "pip cache",
+      "risk": "green",
+      "method": "delete",
+      "regenerates": true,
+      "resolve": [
+        {
+          "cmd": [
+            "pip3",
+            "cache",
+            "dir"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "uv-cache",
+      "tool": "uv",
+      "category": "cache",
+      "kind": "paths",
+      "paths": {
+        "macos": [
+          "{xdg_cache}/uv"
+        ],
+        "linux": [
+          "{xdg_cache}/uv"
+        ],
+        "windows": [
+          "$LOCALAPPDATA/uv/cache"
+        ]
+      },
+      "title": "uv cache",
+      "risk": "green",
+      "method": "command",
+      "command": [
+        "uv",
+        "cache",
+        "clean"
+      ],
+      "fallback": "delete",
+      "regenerates": true,
+      "resolve": [
+        {
+          "cmd": [
+            "uv",
+            "cache",
+            "dir"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "gradle-cache",
+      "tool": "Gradle",
+      "category": "cache",
+      "kind": "paths",
+      "paths": [
+        "{gradle_home}/caches",
+        "{gradle_home}/wrapper/dists"
+      ],
+      "title": "Gradle: {name}",
+      "risk": "green",
+      "method": "delete",
+      "regenerates": true,
+      "requires_closed": {
+        "macos": [
+          "java"
+        ],
+        "linux": [
+          "java"
+        ]
+      }
+    },
+    {
+      "id": "maven-repo",
+      "tool": "Maven",
+      "category": "cache",
+      "kind": "paths",
+      "paths": [
+        "~/.m2/repository"
+      ],
+      "title": "Local Maven repository",
+      "risk": "yellow",
+      "method": "delete",
+      "regenerates": true,
+      "note": "Usually just a cache, but it may hold artifacts installed by hand (mvn install) that exist in no remote repository."
+    },
+    {
+      "id": "cargo-registry",
+      "tool": "Cargo",
+      "category": "cache",
+      "kind": "paths",
+      "paths": [
+        "{cargo_home}/registry/cache",
+        "{cargo_home}/registry/src",
+        "{cargo_home}/git/checkouts"
+      ],
+      "title": "Cargo: {name}",
+      "risk": "green",
+      "method": "delete",
+      "regenerates": true
+    },
+    {
+      "id": "go-modcache",
+      "tool": "Go",
+      "category": "cache",
+      "kind": "paths",
+      "paths": [
+        "~/go/pkg/mod"
+      ],
+      "title": "Go module cache",
+      "risk": "green",
+      "method": "command",
+      "command": [
+        "go",
+        "clean",
+        "-modcache"
+      ],
+      "fallback": "delete",
+      "regenerates": true,
+      "resolve": [
+        {
+          "cmd": [
+            "go",
+            "env",
+            "GOMODCACHE"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "claude-code-tmp",
+      "tool": "Claude Code",
+      "category": "temp",
+      "kind": "children",
+      "paths": {
+        "macos": [
+          "/private/tmp/claude-{uid}"
+        ],
+        "linux": [
+          "/tmp/claude-{uid}"
+        ]
+      },
+      "dirs_only": true,
+      "min_age_hours": 24,
+      "aggregate": true,
+      "title": "{count} temporary folders from finished sessions",
+      "risk": "green",
+      "method": "delete",
+      "regenerates": true,
+      "note": "Per-session scratch files. Folders touched in the last 24h stay out, including the current session's."
+    },
+    {
+      "id": "claude-code-sessions",
+      "tool": "Claude Code",
+      "category": "sessions",
+      "kind": "children",
+      "paths": [
+        "{claude_dir}/projects/*"
+      ],
+      "exclude": [
+        "memory",
+        "MEMORY.md",
+        "*.md"
+      ],
+      "min_age_days": 30,
+      "aggregate": true,
+      "title": "{count} sessions older than 30 days in {base}",
+      "risk": "yellow",
+      "method": "delete",
+      "note": "History used by `claude --resume`. The memory/ folder never enters. To clean it automatically, adjust cleanupPeriodDays in ~/.claude/settings.json."
+    },
+    {
+      "id": "claude-code-file-history",
+      "tool": "Claude Code",
+      "category": "sessions",
+      "kind": "children",
+      "paths": [
+        "{claude_dir}/file-history",
+        "{claude_dir}/shell-snapshots",
+        "{claude_dir}/todos",
+        "{claude_dir}/debug"
+      ],
+      "min_age_days": 30,
+      "aggregate": true,
+      "title": "{count} items older than 30 days in {base}",
+      "risk": "green",
+      "method": "delete",
+      "note": "File checkpoints, shell snapshots and debug logs from old sessions."
+    },
+    {
+      "id": "claude-code-cli-versions",
+      "tool": "Claude Code",
+      "category": "versions",
+      "kind": "versions",
+      "paths": [
+        "{xdg_data}/claude/versions",
+        "~/.local/share/claude/versions"
+      ],
+      "keep_latest": 1,
+      "in_use_link": [
+        "~/.local/bin/claude"
+      ],
+      "title": "Old CLI version: {name}",
+      "risk": "green",
+      "method": "delete",
+      "in_use_which": [
+        "claude"
+      ]
+    },
+    {
+      "id": "claude-cli-cache",
+      "tool": "Claude Code",
+      "category": "cache",
+      "kind": "paths",
+      "paths": {
+        "macos": [
+          "~/Library/Caches/claude-cli-nodejs"
+        ],
+        "linux": [
+          "{xdg_cache}/claude-cli-nodejs"
+        ]
+      },
+      "title": "CLI cache",
+      "risk": "green",
+      "method": "delete",
+      "regenerates": true
+    },
+    {
+      "id": "opencode-cache",
+      "tool": "opencode",
+      "category": "cache",
+      "kind": "paths",
+      "paths": [
+        "{xdg_cache}/opencode"
+      ],
+      "title": "opencode cache (provider packages)",
+      "risk": "green",
+      "method": "delete",
+      "regenerates": true,
+      "verified": false,
+      "requires_closed": [
+        "opencode"
+      ]
+    },
+    {
+      "id": "opencode-logs",
+      "tool": "opencode",
+      "category": "logs",
+      "kind": "children",
+      "paths": [
+        "{xdg_data}/opencode/log"
+      ],
+      "min_age_days": 14,
+      "aggregate": true,
+      "title": "{count} logs older than 14 days",
+      "risk": "green",
+      "method": "delete",
+      "verified": false
+    },
+    {
+      "id": "opencode-snapshots",
+      "tool": "opencode",
+      "category": "sessions",
+      "kind": "children",
+      "paths": [
+        "{xdg_data}/opencode/snapshot"
+      ],
+      "min_age_days": 30,
+      "title": "Snapshots of {name}",
+      "risk": "yellow",
+      "method": "delete",
+      "verified": false,
+      "requires_closed": [
+        "opencode"
+      ],
+      "note": "Internal git repositories opencode uses to undo changes. Without them, old sessions cannot revert changes."
+    },
+    {
+      "id": "opencode-storage",
+      "tool": "opencode",
+      "category": "sessions",
+      "kind": "paths",
+      "paths": [
+        "{xdg_data}/opencode/storage"
+      ],
+      "title": "opencode session history",
+      "risk": "red",
+      "method": "manual",
+      "verified": false,
+      "note": "Sessions and messages. Listed here only for visibility; delete them through opencode itself."
+    }
+  ]
+}
